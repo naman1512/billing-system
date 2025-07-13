@@ -92,8 +92,8 @@ Email: xxxxxx@gmail.com`
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-gray-900 rounded-lg w-full max-w-6xl h-[80vh] flex overflow-hidden border border-gray-700 shadow-2xl">
+    <div className="fixed inset-0 bg-black bg-opacity-70 z-50 backdrop-blur-sm">
+      <div className="bg-gray-900 w-full h-full flex overflow-hidden border border-gray-700 shadow-2xl">
 
         {/* PDF Viewer - Left Half */}
         <div className="w-1/2 border-r border-gray-700 flex flex-col">
@@ -107,11 +107,11 @@ Email: xxxxxx@gmail.com`
               ×
             </button>
           </div>
-          <div className="flex-1 p-4 bg-gray-900">
+          <div className="flex-1 bg-gray-900 overflow-hidden">
             {pdfUrl ? (
               <iframe
                 src={pdfUrl}
-                className="w-full h-full border border-gray-600 rounded shadow-lg"
+                className="w-full h-full border-0 min-h-screen"
                 title="Invoice PDF"
               />
             ) : (
