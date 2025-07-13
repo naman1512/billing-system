@@ -464,7 +464,7 @@ export default function Home() {
 
       {/* Dialog Box */}
       {isDialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div className="fixed inset-0 backdrop-blur-lg flex items-center justify-center z-50">
           <div className="bg-gray-800 rounded-lg p-6 w-96 max-w-md mx-4 relative border border-gray-600 shadow-2xl transform transition-all duration-300 scale-100">
             {/* Close button */}
             <button 
@@ -512,7 +512,7 @@ export default function Home() {
 
       {/* Address Dialog Box */}
       {isAddressDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div className="fixed inset-0 backdrop-blur-lg flex items-center justify-center z-50">
           <div className="bg-gray-800 rounded-lg p-6 w-96 max-w-md mx-4 relative border border-gray-600 shadow-2xl transform transition-all duration-300 scale-100">
             {/* Close button */}
             <button 
@@ -586,7 +586,7 @@ export default function Home() {
 
       {/* Date Dialog Box */}
       {isDateDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div className="fixed inset-0 backdrop-blur-lg flex items-center justify-center z-50">
           <div className="bg-gray-800 rounded-lg p-6 w-96 max-w-md mx-4 relative border border-gray-600 shadow-2xl transform transition-all duration-300 scale-100">
             {/* Close button */}
             <button 
@@ -642,7 +642,7 @@ export default function Home() {
 
       {/* Rent Month/Year Dialog */}
       {isRentMonthDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div className="fixed inset-0 backdrop-blur-lg flex items-center justify-center p-4 z-50">
           <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md border border-gray-600 shadow-2xl transform transition-all duration-300 scale-100">
             <h3 className="text-lg font-semibold mb-4 text-white">Edit Rent Month and Year</h3>
             
