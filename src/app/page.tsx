@@ -1,8 +1,7 @@
-
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import PdfOverlay from './components/PdfOverlay/PdfOverlay';
 import { generatePDF, InvoiceData } from './utils/pdfGenerator';
 
@@ -86,6 +85,27 @@ export default function Home() {
   const [refNumber, setRefNumber] = useState('SWC/25-26/10');
   const [invoiceDate, setInvoiceDate] = useState('1 May 2025');
   
+  // Rent month/year states
+  const [rentMonth, setRentMonth] = useState('May');
+  const [rentYear, setRentYear] = useState('25');
+
+  // Sync rent month/year with invoice date
+  useEffect(() => {
+    try {
+      const date = new Date(invoiceDate);
+      if (!isNaN(date.getTime())) {
+        const months = ['January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'];
+        const month = months[date.getMonth()];
+        const year = date.getFullYear().toString().slice(-2);
+        setRentMonth(month);
+        setRentYear(year);
+      }
+    } catch (error) {
+      console.log('Date parsing error:', error);
+    }
+  }, [invoiceDate]);
+  
   // Dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogField, setDialogField] = useState('');
@@ -99,6 +119,9 @@ export default function Home() {
   });
   const [isDateDialog, setIsDateDialog] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
+  const [isRentMonthDialog, setIsRentMonthDialog] = useState(false);
+  const [tempRentMonth, setTempRentMonth] = useState('');
+  const [tempRentYear, setTempRentYear] = useState('');
   
   // PDF overlay state
   const [isPdfOverlayOpen, setIsPdfOverlayOpen] = useState(false);
@@ -164,6 +187,12 @@ export default function Home() {
     const day = String(currentDate.getDate()).padStart(2, '0');
     setSelectedDate(`${year}-${month}-${day}`);
     setIsDateDialog(true);
+  };
+
+  const openRentMonthDialog = () => {
+    setTempRentMonth(rentMonth);
+    setTempRentYear(rentYear);
+    setIsRentMonthDialog(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -242,15 +271,27 @@ export default function Home() {
     setSelectedDate('');
   };
 
+  const handleRentMonthSave = () => {
+    setRentMonth(tempRentMonth);
+    setRentYear(tempRentYear);
+    setIsRentMonthDialog(false);
+  };
+
+  const handleRentMonthCancel = () => {
+    setIsRentMonthDialog(false);
+    setTempRentMonth('');
+    setTempRentYear('');
+  };
+
   const PencilIcon = () => (
-    <svg className="w-3 h-3 text-gray-600 hover:text-blue-600 cursor-pointer ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-3 h-3 text-gray-400 hover:text-blue-400 cursor-pointer ml-1 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
     </svg>
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 p-2 sm:p-4 lg:p-6 w-full overflow-x-hidden">
-       <main className="max-w-3xl mx-auto p-4 sm:p-6 lg:p-8 bg-white text-black border-2 border-gray-300 shadow-lg w-full overflow-x-auto">
+    <div className="min-h-screen bg-gray-900 p-2 sm:p-4 lg:p-6 w-full overflow-x-hidden">
+       <main className="max-w-3xl mx-auto p-4 sm:p-6 lg:p-8 bg-gray-800 text-white border-2 border-gray-700 shadow-lg w-full overflow-x-auto transition-all duration-300 hover:shadow-2xl">
       <h1 className="text-2xl font-bold text-center text-red-600">
         SAHAYA WAREHOUSING COMPANY
       </h1>
@@ -302,17 +343,17 @@ export default function Home() {
       </div>
 
       <div className="overflow-x-auto mt-6">
-        <table className="min-w-full border border-black text-sm">
+        <table className="min-w-full border border-gray-600 text-sm bg-gray-700">
           <thead>
-            <tr className="border-b border-black">
-              <th className="p-2 border-r border-black">Particulars Area Sqft</th>
-              <th className="p-2 border-r border-black">Rate</th>
-              <th className="p-2">Amount</th>
+            <tr className="border-b border-gray-600 bg-gray-600">
+              <th className="p-2 border-r border-gray-600 text-white">Particulars Area Sqft</th>
+              <th className="p-2 border-r border-gray-600 text-white">Rate</th>
+              <th className="p-2 text-white">Amount</th>
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-black">
-              <td className="p-2 border-r border-black">
+            <tr className="border-b border-gray-600 hover:bg-gray-650 transition-colors duration-200">
+              <td className="p-2 border-r border-gray-600">
                 <div className="flex items-center">
                   Rented for {rentedArea}
                   <button onClick={() => openDialog('rentedArea', rentedArea, 'Edit Rented Area')} aria-label="Edit rented area">
@@ -320,7 +361,7 @@ export default function Home() {
                   </button>
                 </div>
               </td>
-              <td className="p-2 border-r border-black">
+              <td className="p-2 border-r border-gray-600">
                 <div className="flex items-center justify-center">
                   {rentRate}
                   <button onClick={() => openDialog('rentRate', rentRate, 'Edit Rent Rate')} aria-label="Edit rent rate">
@@ -334,9 +375,9 @@ export default function Home() {
                 </div>
               </td>
             </tr>
-            <tr className="border-b border-black">
-              <td className="p-2 border-r border-black">SGST</td>
-              <td className="p-2 border-r border-black">
+            <tr className="border-b border-gray-600 hover:bg-gray-650 transition-colors duration-200">
+              <td className="p-2 border-r border-gray-600">SGST</td>
+              <td className="p-2 border-r border-gray-600">
                 <div className="flex items-center justify-center">
                   {sgstRate}%
                   <button onClick={() => openDialog('sgstRate', sgstRate, 'Edit SGST Rate')} aria-label="Edit SGST rate">
@@ -353,9 +394,9 @@ export default function Home() {
                 </div>
               </td>
             </tr>
-            <tr className="border-b border-black">
-              <td className="p-2 border-r border-black">CGST</td>
-              <td className="p-2 border-r border-black">
+            <tr className="border-b border-gray-600 hover:bg-gray-650 transition-colors duration-200">
+              <td className="p-2 border-r border-gray-600">CGST</td>
+              <td className="p-2 border-r border-gray-600">
                 <div className="flex items-center justify-center">
                   {cgstRate}%
                   <button onClick={() => openDialog('cgstRate', cgstRate, 'Edit CGST Rate')} aria-label="Edit CGST rate">
@@ -372,9 +413,9 @@ export default function Home() {
                 </div>
               </td>
             </tr>
-            <tr>
-              <td className="p-2 border-r border-black font-semibold">Grand Total</td>
-              <td className="p-2 border-r border-black"></td>
+            <tr className="bg-gray-600">
+              <td className="p-2 border-r border-gray-600 font-semibold">Grand Total</td>
+              <td className="p-2 border-r border-gray-600"></td>
               <td className="p-2 font-semibold text-center">
                 {grandTotal}
               </td>
@@ -387,7 +428,12 @@ export default function Home() {
         <p>
           Amount Chargeable (In Words) : <strong>{grandTotalInWords}</strong>
         </p>
-        <p>Rent for the month of May &#39;25</p>
+        <p className="flex items-center">
+          Rent for the month of {rentMonth} &#39;{rentYear}
+          <button onClick={() => openRentMonthDialog()} aria-label="Edit rent month and year">
+            <PencilIcon />
+          </button>
+        </p>
         <p className="mt-2">Pan No. : AEZFS6432B</p>
         <p>
           <strong>HDFC Bank Account No.</strong> : S0200081328200
@@ -401,36 +447,45 @@ export default function Home() {
           (refer circular no. 1/2014, dated 13.01.2014 of income tax act 1961)
         </p>
        <div className="mt-6 flex flex-col items-end">
-  <p>Customer’s Seal and Signature For</p>
+  <p>Customer&#39;s Seal and Signature For</p>
   <p className="font-bold mt-2">Sahaya Warehousing Company</p>
   <p className="mt-1">_____________________</p>
+  <div className="flex justify-end mt-2">
+    <Image 
+      src="/sign.png" 
+      alt="Company Signature" 
+      width={150} 
+      height={75}
+      className="object-contain"
+    />
+  </div>
 </div>
       </div>
 
       {/* Dialog Box */}
       {isDialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4 relative">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-gray-800 rounded-lg p-6 w-96 max-w-md mx-4 relative border border-gray-600 shadow-2xl transform transition-all duration-300 scale-100">
             {/* Close button */}
             <button 
               onClick={handleCancel}
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl"
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-200 text-xl transition-colors duration-200"
               aria-label="Close dialog"
             >
               ×
             </button>
             
             {/* Dialog content */}
-            <h3 className="text-lg font-semibold mb-4">{dialogTitle}</h3>
+            <h3 className="text-lg font-semibold mb-4 text-white">{dialogTitle}</h3>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Enter Value:
               </label>
               <input
                 type="text"
                 value={dialogValue}
                 onChange={(e) => setDialogValue(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 placeholder="Enter value"
                 autoFocus
               />
@@ -440,13 +495,13 @@ export default function Home() {
             <div className="flex justify-end space-x-2">
               <button
                 onClick={handleCancel}
-                className="px-4 py-2 text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                className="px-4 py-2 text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600 transition-all duration-200 border border-gray-600"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
-                className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 Save
               </button>
@@ -457,55 +512,55 @@ export default function Home() {
 
       {/* Address Dialog Box */}
       {isAddressDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4 relative">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-gray-800 rounded-lg p-6 w-96 max-w-md mx-4 relative border border-gray-600 shadow-2xl transform transition-all duration-300 scale-100">
             {/* Close button */}
             <button 
               onClick={handleAddressCancel}
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl"
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-200 text-xl transition-colors duration-200"
               aria-label="Close address dialog"
             >
               ×
             </button>
             
             {/* Dialog content */}
-            <h3 className="text-lg font-semibold mb-4">Edit Address</h3>
+            <h3 className="text-lg font-semibold mb-4 text-white">Edit Address</h3>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Address Line 1:
               </label>
               <input
                 type="text"
                 value={addressDialogValues.line1}
                 onChange={(e) => setAddressDialogValues({...addressDialogValues, line1: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 placeholder="Enter address line 1"
               />
             </div>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Address Line 2:
               </label>
               <input
                 type="text"
                 value={addressDialogValues.line2}
                 onChange={(e) => setAddressDialogValues({...addressDialogValues, line2: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 placeholder="Enter address line 2"
               />
             </div>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Address Line 3:
               </label>
               <input
                 type="text"
                 value={addressDialogValues.line3}
                 onChange={(e) => setAddressDialogValues({...addressDialogValues, line3: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 placeholder="Enter address line 3"
               />
             </div>
@@ -514,13 +569,13 @@ export default function Home() {
             <div className="flex justify-end space-x-2">
               <button
                 onClick={handleAddressCancel}
-                className="px-4 py-2 text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                className="px-4 py-2 text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600 transition-all duration-200 border border-gray-600"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddressSave}
-                className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 Save
               </button>
@@ -531,37 +586,37 @@ export default function Home() {
 
       {/* Date Dialog Box */}
       {isDateDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4 relative">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-gray-800 rounded-lg p-6 w-96 max-w-md mx-4 relative border border-gray-600 shadow-2xl transform transition-all duration-300 scale-100">
             {/* Close button */}
             <button 
               onClick={handleDateCancel}
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl"
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-200 text-xl transition-colors duration-200"
               aria-label="Close date dialog"
             >
               ×
             </button>
             
             {/* Dialog content */}
-            <h3 className="text-lg font-semibold mb-4">Select Date</h3>
+            <h3 className="text-lg font-semibold mb-4 text-white">Select Date</h3>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Choose Date:
               </label>
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 aria-label="Select date"
               />
             </div>
             
             {/* Preview */}
             {selectedDate && (
-              <div className="mb-4 p-3 bg-gray-50 rounded-md">
-                <p className="text-sm text-gray-600">Preview:</p>
-                <p className="font-medium">{formatDate(selectedDate)}</p>
+              <div className="mb-4 p-3 bg-gray-700 rounded-md border border-gray-600">
+                <p className="text-sm text-gray-300">Preview:</p>
+                <p className="font-medium text-white">{formatDate(selectedDate)}</p>
               </div>
             )}
             
@@ -569,14 +624,89 @@ export default function Home() {
             <div className="flex justify-end space-x-2">
               <button
                 onClick={handleDateCancel}
-                className="px-4 py-2 text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                className="px-4 py-2 text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600 transition-all duration-200 border border-gray-600"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDateSave}
-                className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
                 disabled={!selectedDate}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rent Month/Year Dialog */}
+      {isRentMonthDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md border border-gray-600 shadow-2xl transform transition-all duration-300 scale-100">
+            <h3 className="text-lg font-semibold mb-4 text-white">Edit Rent Month and Year</h3>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Month
+              </label>
+              <select
+                value={tempRentMonth}
+                onChange={(e) => setTempRentMonth(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                aria-label="Select month"
+              >
+                <option value="">Select Month</option>
+                <option value="January">January</option>
+                <option value="February">February</option>
+                <option value="March">March</option>
+                <option value="April">April</option>
+                <option value="May">May</option>
+                <option value="June">June</option>
+                <option value="July">July</option>
+                <option value="August">August</option>
+                <option value="September">September</option>
+                <option value="October">October</option>
+                <option value="November">November</option>
+                <option value="December">December</option>
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Year (Last 2 digits)
+              </label>
+              <input
+                type="text"
+                value={tempRentYear}
+                onChange={(e) => setTempRentYear(e.target.value)}
+                placeholder="e.g., 25"
+                maxLength={2}
+                className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                aria-label="Enter year"
+              />
+            </div>
+            
+            {/* Preview */}
+            {tempRentMonth && tempRentYear && (
+              <div className="mb-4 p-3 bg-gray-700 rounded-md border border-gray-600">
+                <p className="text-sm text-gray-300">Preview:</p>
+                <p className="font-medium text-white">Rent for the month of {tempRentMonth} &#39;{tempRentYear}</p>
+              </div>
+            )}
+            
+            {/* Buttons */}
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={handleRentMonthCancel}
+                className="px-4 py-2 text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600 transition-all duration-200 border border-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRentMonthSave}
+                className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                disabled={!tempRentMonth || !tempRentYear}
               >
                 Save
               </button>

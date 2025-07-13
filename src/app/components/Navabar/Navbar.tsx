@@ -20,21 +20,21 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-md border-b border-gray-200 w-full">
+    <nav className="bg-gray-900 shadow-2xl border-b border-gray-700 w-full backdrop-blur-sm">
       <div className="w-full px-2 sm:px-4 lg:px-8">
         <div className="flex justify-between items-center h-16 w-full">
           {/* Logo/Brand */}
           <div className="flex-shrink-0 overflow-hidden">
             {/* Large Desktop version - Full name */}
-            <h1 className="hidden lg:block text-lg font-bold text-red-600 truncate">
+            <h1 className="hidden lg:block text-lg font-bold text-red-400 truncate hover:text-red-300 transition-colors duration-300">
               SahayaWarehousing Billing System
             </h1>
             {/* Medium Desktop version - Shorter name */}
-            <h1 className="hidden sm:block lg:hidden text-lg font-bold text-red-600 truncate">
+            <h1 className="hidden sm:block lg:hidden text-lg font-bold text-red-400 truncate hover:text-red-300 transition-colors duration-300">
               Sahaya Billing
             </h1>
             {/* Mobile version - Abbreviated name */}
-            <h1 className="block sm:hidden text-base font-bold text-red-600 truncate">
+            <h1 className="block sm:hidden text-base font-bold text-red-400 truncate hover:text-red-300 transition-colors duration-300">
               SWH Billing
             </h1>
           </div>
@@ -44,7 +44,7 @@ export default function Navbar() {
             <div className="flex items-center">
               <button 
                 onClick={handleConvertAndSend}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 whitespace-nowrap transform hover:scale-105 shadow-lg hover:shadow-xl"
               >
                 Convert and Send
               </button>
@@ -55,13 +55,13 @@ export default function Navbar() {
           <div className="md:hidden flex-shrink-0 ml-2">
             <button
               onClick={toggleMenu}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 transition-all duration-300"
               aria-expanded="false"
             >
               <span className="sr-only">Open main menu</span>
               {/* Hamburger icon */}
               <svg
-                className={`${isMenuOpen ? 'hidden' : 'block'} h-6 w-6`}
+                className={`${isMenuOpen ? 'hidden' : 'block'} h-6 w-6 transition-transform duration-300`}
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -77,7 +77,7 @@ export default function Navbar() {
               </svg>
               {/* Close icon */}
               <svg
-                className={`${isMenuOpen ? 'block' : 'hidden'} h-6 w-6`}
+                className={`${isMenuOpen ? 'block' : 'hidden'} h-6 w-6 transition-transform duration-300`}
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -97,11 +97,11 @@ export default function Navbar() {
       </div>
 
       {/* Mobile Navigation Menu */}
-      <div className={`${isMenuOpen ? 'block' : 'hidden'} md:hidden`}>
-        <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-50 border-t border-gray-200">
+      <div className={`${isMenuOpen ? 'block' : 'hidden'} md:hidden transition-all duration-300`}>
+        <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-800 border-t border-gray-700">
           <button 
             onClick={handleConvertAndSend}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors w-full text-left"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 w-full text-left transform hover:scale-105"
           >
             Convert and Send
           </button>
