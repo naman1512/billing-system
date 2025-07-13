@@ -127,6 +127,46 @@ export default function Home() {
   const [isPdfOverlayOpen, setIsPdfOverlayOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState('');
 
+  // Load saved data from localStorage when component mounts
+  useEffect(() => {
+    try {
+      const savedData = localStorage.getItem('savedInvoiceData');
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        // Update all the state variables with saved data
+        setRecipientName(parsedData.recipientName || 'Rackup');
+        setAddressLine1(parsedData.addressLine1 || 'Plot No 552, Chandani Warehouse');
+        setAddressLine2(parsedData.addressLine2 || 'Village Parvar Poorab, Sarojini Nagar,');
+        setAddressLine3(parsedData.addressLine3 || 'Lucknow, Uttar Pradesh 226008');
+        setRecipientGst(parsedData.recipientGst || '09CVWPG8839A2Z0');
+        setRefNumber(parsedData.refNumber || 'SWC/25-26/10');
+        setInvoiceDate(parsedData.invoiceDate || '1 May 2025');
+        setRentedArea(parsedData.rentedArea || '26500');
+        setRentRate(parsedData.rentRate || '18');
+        setSgstRate(parsedData.sgstRate || '9');
+        setCgstRate(parsedData.cgstRate || '9');
+        
+        // Update rent month/year if provided
+        if (parsedData.rentMonth) setRentMonth(parsedData.rentMonth);
+        if (parsedData.rentYear) setRentYear(parsedData.rentYear);
+        
+        // Show a brief confirmation that data was loaded
+        const hasChanges = 
+          parsedData.recipientName !== 'Rackup' ||
+          parsedData.addressLine1 !== 'Plot No 552, Chandani Warehouse' ||
+          parsedData.refNumber !== 'SWC/25-26/10';
+        
+        if (hasChanges) {
+          setTimeout(() => {
+            alert('Data loaded from Live Editor!');
+          }, 500);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading saved data:', error);
+    }
+  }, []);
+
   // Function to handle PDF conversion
   const handleConvertAndSend = async () => {
     try {
@@ -297,14 +337,16 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black p-2 sm:p-4 lg:p-6 w-full overflow-x-hidden animate-pulse-slow">
-       <main className={`${isPdfOverlayOpen ? 'w-full' : 'max-w-3xl mx-auto'} p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900 text-white border-2 border-gray-600 shadow-2xl overflow-hidden transition-all duration-500 hover:shadow-blue-500/20 hover:border-blue-500/50 hover:scale-[1.01] animate-fade-in-up backdrop-blur-sm rounded-xl`}>
-      <h1 className="text-2xl font-bold text-center text-red-500">
-        SAHAYA WAREHOUSING COMPANY
-      </h1>
-      <p className="text-center text-sm opacity-80">
-        Plot No 562 Village Natkur Bhandari Farm Sarojini Nagar Lucknow – 226008
-      </p>
-      <h2 className="text-center font-semibold mt-2">TAX INVOICE</h2>
+        <main className={`${isPdfOverlayOpen ? 'w-full' : 'max-w-3xl mx-auto'} p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900 text-white border-2 border-gray-600 shadow-2xl overflow-hidden transition-all duration-500 hover:shadow-blue-500/20 hover:border-blue-500/50 hover:scale-[1.01] animate-fade-in-up backdrop-blur-sm rounded-xl`}>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-red-500">
+              SAHAYA WAREHOUSING COMPANY
+            </h1>
+            <p className="text-sm opacity-80">
+              Plot No 562 Village Natkur Bhandari Farm Sarojini Nagar Lucknow – 226008
+            </p>
+            <h2 className="font-semibold mt-2">TAX INVOICE</h2>
+          </div>
 
       <div className="flex justify-between text-sm mt-4 animate-slide-in-left">
         <div className="space-y-1">

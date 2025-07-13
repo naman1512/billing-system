@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { generateInvoiceHTML } from '../../utils/pdfGenerator';
+import { generateInvoiceHTML } from '../../utils/pdfGenerator-new';
 
 export async function GET() {
   try {

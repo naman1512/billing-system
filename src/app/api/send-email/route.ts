@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import { generatePDFBuffer } from '@/app/utils/pdfGenerator';
+import { generatePDFBuffer } from '../../utils/pdfGenerator-new';
 
 export async function POST(request: NextRequest) {
   try {

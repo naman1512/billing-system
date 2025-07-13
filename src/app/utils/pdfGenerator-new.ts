@@ -16,6 +16,8 @@ export interface InvoiceData {
   cgstAmount: string;
   grandTotal: string;
   grandTotalInWords: string;
+  rentMonth?: string;
+  rentYear?: string;
 }
 
 // Import jsPDF dynamically to avoid SSR issues
@@ -147,7 +149,7 @@ export const generatePDFBuffer = async (invoiceData: InvoiceData): Promise<Buffe
 };
 
 // Generate HTML content for invoice
-const generateInvoiceHTML = (invoiceData: InvoiceData): string => {
+export const generateInvoiceHTML = (invoiceData: InvoiceData): string => {
   return `
     <!DOCTYPE html>
     <html>
