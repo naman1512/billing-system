@@ -50,9 +50,9 @@ export default function Navbar() {
           <div className="hidden md:block flex-shrink-0">
             <div className="flex items-center space-x-4">
               <Link 
-                href="/"
+                href="/create-bill"
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 whitespace-nowrap ${
-                  isCurrentPage('/') 
+                  isCurrentPage('/create-bill') 
                     ? 'bg-blue-600 text-white' 
                     : 'text-gray-300 hover:text-white hover:bg-gray-700'
                 }`}
@@ -69,7 +69,7 @@ export default function Navbar() {
               >
                 Live Editor
               </Link>
-              {pathname === '/' && (
+              {pathname === '/create-bill' && (
                 <button 
                   onClick={handleConvertAndSend}
                   className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 whitespace-nowrap transform hover:scale-105 shadow-lg hover:shadow-xl"
@@ -129,9 +129,9 @@ export default function Navbar() {
       <div className={`${isMenuOpen ? 'block' : 'hidden'} md:hidden transition-all duration-300`}>
         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-800 border-t border-gray-700">
           <Link 
-            href="/"
+            href="/create-bill"
             className={`block px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
-              isCurrentPage('/') 
+              isCurrentPage('/create-bill') 
                 ? 'bg-blue-600 text-white' 
                 : 'text-gray-300 hover:text-white hover:bg-gray-700'
             }`}
@@ -148,7 +148,7 @@ export default function Navbar() {
           >
             Live Editor
           </Link>
-          {pathname === '/' && (
+          {pathname === '/create-bill' && (
             <button 
               onClick={handleConvertAndSend}
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 w-full text-left transform hover:scale-105"
