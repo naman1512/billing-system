@@ -30,6 +30,11 @@ const getJsPDF = async () => {
 // Load signature image as base64 for server-side PDF generation
 const getSignatureBase64 = async (): Promise<string | null> => {
   try {
+    // Only run on server-side
+    if (typeof window !== 'undefined') {
+      return null;
+    }
+    
     // For server-side, we need to read the file from the public directory
     const fs = await import('fs');
     const path = await import('path');
