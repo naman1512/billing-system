@@ -5,9 +5,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import PdfOverlay from '../components/PdfOverlay/PdfOverlay';
 import { generatePDF, InvoiceData } from '../utils/pdfGenerator-new';
+import { getTemplateById, getTemplateOptions } from '../utils/companyTemplates';
 import toast from 'react-hot-toast';
 
 export default function CreateBill() {
+  // Company template selection state
+  const [selectedCompanyId, setSelectedCompanyId] = useState('company1');
+  
   const [rentedArea, setRentedArea] = useState('26500');
   const [rentRate, setRentRate] = useState('18');
   const [sgstRate, setSgstRate] = useState('9');
@@ -176,6 +180,19 @@ export default function CreateBill() {
     }
   }, []);
 
+  // Auto-calculate SGST and CGST amounts based on rent amount and rates
+  useEffect(() => {
+    const rent = parseInt(rentAmount || '0');
+    const sgstRateValue = parseInt(sgstRate || '0');
+    const cgstRateValue = parseInt(cgstRate || '0');
+    
+    const calculatedSgstAmount = Math.round((rent * sgstRateValue) / 100);
+    const calculatedCgstAmount = Math.round((rent * cgstRateValue) / 100);
+    
+    setSgstAmount(calculatedSgstAmount.toString());
+    setCgstAmount(calculatedCgstAmount.toString());
+  }, [rentAmount, sgstRate, cgstRate]);
+
   // Function to handle PDF conversion
   const handleConvertAndSend = async () => {
     try {
@@ -298,6 +315,36 @@ export default function CreateBill() {
     setIsDialogOpen(false);
   };
 
+  // Function to handle company template selection
+  const handleCompanyTemplateChange = (companyId: string) => {
+    const template = getTemplateById(companyId);
+    if (template) {
+      setSelectedCompanyId(companyId);
+      
+      // Update recipient details
+      setRecipientName(template.recipientDetails.name);
+      setAddressLine1(template.recipientDetails.addressLine1);
+      setAddressLine2(template.recipientDetails.addressLine2);
+      setAddressLine3(template.recipientDetails.addressLine3);
+      setRecipientGst(template.recipientDetails.gstNumber);
+      
+      // Update bill details
+      setRentedArea(template.billDetails.rentedArea);
+      setRentRate(template.billDetails.rentRate);
+      setSgstRate(template.billDetails.sgstRate);
+      setCgstRate(template.billDetails.cgstRate);
+      
+      // Update reference number with template prefix
+      const refCount = String(Math.floor(Math.random() * 99) + 1).padStart(2, '0');
+      setRefNumber(`${template.defaultRefNumberPrefix}/${refCount}`);
+      
+      toast.success(`Switched to ${template.name}`, {
+        icon: '🏢',
+        duration: 2000,
+      });
+    }
+  };
+
   const handleAddressSave = () => {
     setAddressLine1(addressDialogValues.line1);
     setAddressLine2(addressDialogValues.line2);
@@ -370,6 +417,30 @@ export default function CreateBill() {
               Plot No 562 Village Natkur Bhandari Farm Sarojini Nagar Lucknow – 226008
             </p>
             <h2 className="font-semibold mt-2">TAX INVOICE</h2>
+          </div>
+
+          {/* Company Template Selection */}
+          <div className="mt-6 mb-4 animate-fade-in-up">
+            <div className="bg-gray-700/50 p-4 rounded-lg border border-gray-600">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Select Company Template:
+              </label>
+              <select
+                value={selectedCompanyId}
+                onChange={(e) => handleCompanyTemplateChange(e.target.value)}
+                title="Select Company Template"
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 hover:border-blue-400"
+              >
+                {getTemplateOptions().map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 mt-1">
+                Choose a company template to auto-fill recipient details and billing information
+              </p>
+            </div>
           </div>
 
       <div className="flex justify-between text-sm mt-4 animate-slide-in-left">
