@@ -27,117 +27,298 @@ const getJsPDF = async () => {
   return { jsPDF, html2canvas };
 };
 
+// Load signature image as base64 for server-side PDF generation
+const getSignatureBase64 = async (): Promise<string | null> => {
+  try {
+    // For server-side, we need to read the file from the public directory
+    const fs = await import('fs');
+    const path = await import('path');
+    
+    const signaturePath = path.join(process.cwd(), 'public', 'sign.png');
+    
+    if (fs.existsSync(signaturePath)) {
+      const imageBuffer = fs.readFileSync(signaturePath);
+      return `data:image/png;base64,${imageBuffer.toString('base64')}`;
+    }
+    return null;
+  } catch (error) {
+    console.warn('Could not load signature image:', error);
+    return null;
+  }
+};
+
 // Generate PDF buffer for email attachment
 export const generatePDFBuffer = async (invoiceData: InvoiceData): Promise<Buffer> => {
   try {
     const { jsPDF } = await getJsPDF();
     
-    // Create new PDF document
+    // Create new PDF document with better margins
     const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pageWidth - (margin * 2);
     
-    // Set font
-    pdf.setFont('helvetica');
+    // Add outer border
+    pdf.setLineWidth(0.5);
+    pdf.setDrawColor(0, 0, 0);
+    pdf.rect(margin - 5, margin - 5, contentWidth + 10, pageHeight - (margin * 2) + 10);
     
-    // Add header
-    pdf.setFontSize(20);
-    pdf.setTextColor(220, 38, 38); // Red color
-    pdf.text('SAHAYA WAREHOUSING COMPANY', 105, 20, { align: 'center' });
+    // Add inner border with some padding
+    pdf.setLineWidth(0.2);
+    pdf.setDrawColor(100, 100, 100);
+    pdf.rect(margin, margin, contentWidth, pageHeight - (margin * 2));
     
+    let currentY = margin + 10;
+    
+    // Company Header with better styling
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(18);
+    pdf.setTextColor(220, 38, 38);
+    const companyName = 'SAHAYA WAREHOUSING COMPANY';
+    const companyNameWidth = pdf.getTextWidth(companyName);
+    pdf.text(companyName, (pageWidth - companyNameWidth) / 2, currentY);
+    
+    currentY += 8;
+    pdf.setFontSize(9);
+    pdf.setTextColor(60, 60, 60);
+    pdf.setFont('helvetica', 'normal');
+    const address = 'Plot No 562 Village Natkur Bhandari Farm Sarojini Nagar Lucknow – 226008';
+    const addressWidth = pdf.getTextWidth(address);
+    pdf.text(address, (pageWidth - addressWidth) / 2, currentY);
+    
+    currentY += 10;
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(0, 0, 0);
+    const invoiceTitle = 'TAX INVOICE';
+    const titleWidth = pdf.getTextWidth(invoiceTitle);
+    pdf.text(invoiceTitle, (pageWidth - titleWidth) / 2, currentY);
+    
+    // Add a line separator
+    currentY += 8;
+    pdf.setLineWidth(0.3);
+    pdf.setDrawColor(0, 0, 0);
+    pdf.line(margin + 10, currentY, pageWidth - margin - 10, currentY);
+    
+    currentY += 15;
+    
+    // Two column layout for recipient and company info
+    const leftColX = margin + 5;
+    const rightColX = pageWidth - margin - 70;
+    
+    // Recipient information (left column)
     pdf.setFontSize(10);
-    pdf.setTextColor(0, 0, 0); // Black color
-    pdf.text('Plot No 562 Village Natkur Bhandari Farm Sarojini Nagar Lucknow – 226008', 105, 28, { align: 'center' });
-    
-    pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('TAX INVOICE', 105, 38, { align: 'center' });
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('To,', leftColX, currentY);
     
-    // Add recipient info
+    currentY += 6;
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`${invoiceData.recipientName},`, leftColX, currentY);
+    
+    currentY += 5;
+    pdf.text(invoiceData.addressLine1, leftColX, currentY);
+    
+    currentY += 5;
+    pdf.text(invoiceData.addressLine2, leftColX, currentY);
+    
+    currentY += 5;
+    pdf.text(invoiceData.addressLine3, leftColX, currentY);
+    
+    currentY += 5;
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`GST NO: ${invoiceData.recipientGst}`, leftColX, currentY);
+    
+    // Company information (right column) - reset Y position
+    let rightColY = currentY - 25;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.text('GST No.: 09AEZFS6432B1ZL', rightColX, rightColY);
+    
+    rightColY += 5;
+    pdf.text('PAN No.: AEZFS6432B', rightColX, rightColY);
+    
+    rightColY += 5;
+    pdf.text('HSN Code: 997212', rightColX, rightColY);
+    
+    rightColY += 8;
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`Ref No: ${invoiceData.refNumber}`, rightColX, rightColY);
+    
+    rightColY += 5;
+    pdf.text(`Date: ${invoiceData.invoiceDate}`, rightColX, rightColY);
+    
+    currentY += 20;
+    
+    // Table with professional styling
+    const tableX = margin + 5;
+    const tableWidth = contentWidth - 10;
+    const col1Width = tableWidth * 0.55;
+    const col2Width = tableWidth * 0.20;
+    const col3Width = tableWidth * 0.25;
+    const rowHeight = 12;
+    
+    // Table header with background
+    pdf.setFillColor(240, 240, 240);
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(0.3);
+    
+    // Header row background
+    pdf.rect(tableX, currentY, tableWidth, rowHeight, 'FD');
+    
+    pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+    
+    // Header text
+    pdf.text('Particulars Area Sqft', tableX + 3, currentY + 8);
+    pdf.text('Rate', tableX + col1Width + (col2Width / 2) - (pdf.getTextWidth('Rate') / 2), currentY + 8);
+    pdf.text('Amount', tableX + col1Width + col2Width + (col3Width / 2) - (pdf.getTextWidth('Amount') / 2), currentY + 8);
+    
+    // Header borders
+    pdf.line(tableX, currentY, tableX + tableWidth, currentY); // top
+    pdf.line(tableX, currentY + rowHeight, tableX + tableWidth, currentY + rowHeight); // bottom
+    pdf.line(tableX, currentY, tableX, currentY + rowHeight); // left
+    pdf.line(tableX + col1Width, currentY, tableX + col1Width, currentY + rowHeight); // middle 1
+    pdf.line(tableX + col1Width + col2Width, currentY, tableX + col1Width + col2Width, currentY + rowHeight); // middle 2
+    pdf.line(tableX + tableWidth, currentY, tableX + tableWidth, currentY + rowHeight); // right
+    
+    currentY += rowHeight;
+    
+    // Table rows
     pdf.setFont('helvetica', 'normal');
-    pdf.text('To,', 20, 55);
-    pdf.text(`${invoiceData.recipientName},`, 20, 63);
-    pdf.text(invoiceData.addressLine1, 20, 71);
-    pdf.text(invoiceData.addressLine2, 20, 79);
-    pdf.text(invoiceData.addressLine3, 20, 87);
-    pdf.text(`GST NO: ${invoiceData.recipientGst}`, 20, 95);
+    pdf.setFontSize(9);
     
-    // Add company info (right side)
-    pdf.text('GST No.: 09AEZFS6432B1ZL', 120, 55);
-    pdf.text('PAN No.: AEZFS6432B', 120, 63);
-    pdf.text('HSN Code : 997212', 120, 71);
-    pdf.text(`Ref No ${invoiceData.refNumber}     Date: ${invoiceData.invoiceDate}`, 120, 79);
+    const rows = [
+      [`Rented for ${invoiceData.rentedArea}`, invoiceData.rentRate, invoiceData.rentAmount],
+      ['SGST', `${invoiceData.sgstRate}%`, invoiceData.sgstAmount],
+      ['CGST', `${invoiceData.cgstRate}%`, invoiceData.cgstAmount]
+    ];
     
-    // Add table header
-    const tableY = 110;
+    rows.forEach((row, index) => {
+      // Alternate row background
+      if (index % 2 === 0) {
+        pdf.setFillColor(250, 250, 250);
+        pdf.rect(tableX, currentY, tableWidth, rowHeight, 'F');
+      }
+      
+      pdf.text(row[0], tableX + 3, currentY + 8);
+      pdf.text(row[1], tableX + col1Width + (col2Width / 2) - (pdf.getTextWidth(row[1]) / 2), currentY + 8);
+      pdf.text(row[2], tableX + col1Width + col2Width + col3Width - 3 - pdf.getTextWidth(row[2]), currentY + 8);
+      
+      // Row borders
+      pdf.line(tableX, currentY + rowHeight, tableX + tableWidth, currentY + rowHeight);
+      pdf.line(tableX, currentY, tableX, currentY + rowHeight);
+      pdf.line(tableX + col1Width, currentY, tableX + col1Width, currentY + rowHeight);
+      pdf.line(tableX + col1Width + col2Width, currentY, tableX + col1Width + col2Width, currentY + rowHeight);
+      pdf.line(tableX + tableWidth, currentY, tableX + tableWidth, currentY + rowHeight);
+      
+      currentY += rowHeight;
+    });
+    
+    // Grand Total row with special styling
+    pdf.setFillColor(220, 220, 220);
+    pdf.rect(tableX, currentY, tableWidth, rowHeight, 'FD');
+    
     pdf.setFont('helvetica', 'bold');
-    pdf.rect(20, tableY, 50, 8);
-    pdf.rect(70, tableY, 30, 8);
-    pdf.rect(100, tableY, 30, 8);
-    pdf.text('Particulars Area Sqft', 22, tableY + 5);
-    pdf.text('Rate', 82, tableY + 5);
-    pdf.text('Amount', 112, tableY + 5);
+    pdf.setFontSize(11);
+    pdf.text('Grand Total', tableX + 3, currentY + 8);
+    pdf.text(invoiceData.grandTotal, tableX + col1Width + col2Width + col3Width - 3 - pdf.getTextWidth(invoiceData.grandTotal), currentY + 8);
     
-    // Add table rows
+    // Grand total borders
+    pdf.line(tableX, currentY + rowHeight, tableX + tableWidth, currentY + rowHeight);
+    pdf.line(tableX, currentY, tableX, currentY + rowHeight);
+    pdf.line(tableX + col1Width, currentY, tableX + col1Width, currentY + rowHeight);
+    pdf.line(tableX + col1Width + col2Width, currentY, tableX + col1Width + col2Width, currentY + rowHeight);
+    pdf.line(tableX + tableWidth, currentY, tableX + tableWidth, currentY + rowHeight);
+    
+    currentY += rowHeight + 15;
+    
+    // Amount in words with better formatting
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    pdf.text('Amount Chargeable (In Words):', margin + 5, currentY);
+    
+    currentY += 6;
     pdf.setFont('helvetica', 'normal');
-    let rowY = tableY + 8;
+    pdf.setFontSize(9);
+    const wordsText = invoiceData.grandTotalInWords;
+    const splitWords = pdf.splitTextToSize(wordsText, contentWidth - 10);
+    pdf.text(splitWords, margin + 5, currentY);
     
-    // Row 1: Rented area
-    pdf.rect(20, rowY, 50, 8);
-    pdf.rect(70, rowY, 30, 8);
-    pdf.rect(100, rowY, 30, 8);
-    pdf.text(`Rented for ${invoiceData.rentedArea}`, 22, rowY + 5);
-    pdf.text(invoiceData.rentRate, 82, rowY + 5);
-    pdf.text(invoiceData.rentAmount, 112, rowY + 5);
+    currentY += 8; /* Reduced spacing */
     
-    // Row 2: SGST
-    rowY += 8;
-    pdf.rect(20, rowY, 50, 8);
-    pdf.rect(70, rowY, 30, 8);
-    pdf.rect(100, rowY, 30, 8);
-    pdf.text('SGST', 22, rowY + 5);
-    pdf.text(`${invoiceData.sgstRate}%`, 82, rowY + 5);
-    pdf.text(invoiceData.sgstAmount, 112, rowY + 5);
-    
-    // Row 3: CGST
-    rowY += 8;
-    pdf.rect(20, rowY, 50, 8);
-    pdf.rect(70, rowY, 30, 8);
-    pdf.rect(100, rowY, 30, 8);
-    pdf.text('CGST', 22, rowY + 5);
-    pdf.text(`${invoiceData.cgstRate}%`, 82, rowY + 5);
-    pdf.text(invoiceData.cgstAmount, 112, rowY + 5);
-    
-    // Row 4: Grand Total
-    rowY += 8;
-    pdf.rect(20, rowY, 50, 8);
-    pdf.rect(70, rowY, 30, 8);
-    pdf.rect(100, rowY, 30, 8);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Grand Total', 22, rowY + 5);
-    pdf.text(invoiceData.grandTotal, 112, rowY + 5);
-    
-    // Add amount in words
+    // Additional information
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Amount Chargeable (In Words) : ${invoiceData.grandTotalInWords}`, 20, rowY + 20);
+    pdf.setFontSize(9);
+    pdf.text(`Rent for the month of ${invoiceData.rentMonth || 'May'} '${invoiceData.rentYear || '25'}`, margin + 5, currentY);
     
-    // Add footer info
-    pdf.text('Rent for the month of May \'25', 20, rowY + 30);
-    pdf.text('Pan No. : AEZFS6432B', 20, rowY + 40);
+    currentY += 8;
+    pdf.text('Pan No.: AEZFS6432B', margin + 5, currentY);
+    
+    currentY += 6;
     pdf.setFont('helvetica', 'bold');
-    pdf.text('HDFC Bank Account No. : S0200081328200', 20, rowY + 48);
-    pdf.text('IFSC Code : HDFC0000078', 20, rowY + 56);
+    pdf.text('HDFC Bank Account No.: S0200081328200', margin + 5, currentY);
     
-    // Add declaration
+    currentY += 6;
+    pdf.text('IFSC Code: HDFC0000078', margin + 5, currentY);
+    
+    currentY += 12;
+    
+    // Declaration section
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9);
+    pdf.text('Declaration:', margin + 5, currentY);
+    
+    currentY += 5;
     pdf.setFont('helvetica', 'normal');
-    pdf.text('Declaration :', 20, rowY + 68);
-    pdf.text('*TDS – Under section 194I should be deducted on gross bill value excluding service tax value', 20, rowY + 76);
-    pdf.text('(refer circular no. 1/2014, dated 13.01.2014 of income tax act 1961)', 20, rowY + 84);
+    pdf.setFontSize(8);
+    const declarationText = '*TDS – Under section 194I should be deducted on gross bill value excluding service tax value (refer circular no. 1/2014, dated 13.01.2014 of income tax act 1961)';
+    const splitDeclaration = pdf.splitTextToSize(declarationText, contentWidth - 60);
+    pdf.text(splitDeclaration, margin + 5, currentY);
     
-    // Add signature section
-    pdf.text('Customer\'s Seal and Signature For', 120, rowY + 100);
+    // Signature section with better positioning
+    const signatureX = pageWidth - margin - 60;
+    const signatureY = currentY + 15;
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.text('Customer\'s Seal and Signature For', signatureX, signatureY);
+    
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Sahaya Warehousing Company', 120, rowY + 108);
-    pdf.text('_____________________', 120, rowY + 116);
+    pdf.text('Sahaya Warehousing Company', signatureX, signatureY + 4);
+    
+    // Add signature line after company name
+    pdf.setLineWidth(0.3);
+    pdf.line(signatureX, signatureY + 10, signatureX + 50, signatureY + 10);
+    
+    // Try to add the actual signature image below the line
+    try {
+      const signatureBase64 = await getSignatureBase64();
+      
+      if (signatureBase64) {
+        // Add the actual signature image below the line
+        pdf.addImage(signatureBase64, 'PNG', signatureX + 5, signatureY + 12, 40, 15);
+      } else {
+        throw new Error('Signature image not found');
+      }
+    } catch (error) {
+      console.warn('Could not add signature image, using stylized text:', error);
+      // Fallback - create a stylized signature text below the line
+      pdf.setFont('helvetica', 'italic');
+      pdf.setFontSize(12);
+      pdf.setTextColor(0, 0, 0);
+      
+      // Draw a simple signature-like text below the line
+      pdf.text('Sahaya Warehousing', signatureX + 5, signatureY + 20);
+      pdf.text('Company', signatureX + 15, signatureY + 24);
+      
+      // Add some decorative lines to simulate a signature
+      pdf.setLineWidth(0.5);
+      pdf.line(signatureX + 5, signatureY + 26, signatureX + 35, signatureY + 26);
+      pdf.line(signatureX + 10, signatureY + 28, signatureX + 30, signatureY + 28);
+    }
     
     // Convert PDF to buffer
     const pdfArrayBuffer = pdf.output('arraybuffer');
@@ -157,148 +338,317 @@ export const generateInvoiceHTML = (invoiceData: InvoiceData): string => {
         <meta charset="utf-8">
         <title>Invoice</title>
         <style>
+          @page {
+            margin: 20mm;
+            size: A4;
+          }
+          
           body { 
-            font-family: Arial, sans-serif; 
-            margin: 40px;
-            color: black;
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: white;
+            color: #333;
+            line-height: 1.4;
           }
-          .header { 
-            text-align: center; 
+          
+          .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            border: 2px solid #000;
+            padding: 30px;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+          }
+          
+          .inner-border {
+            border: 1px solid #666;
+            padding: 20px;
+            min-height: 90vh;
+          }
+          
+          .header {
+            text-align: center;
             margin-bottom: 30px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 20px;
           }
-          .company-name { 
-            font-size: 24px; 
-            font-weight: bold; 
+          
+          .company-name {
+            font-size: 24px;
+            font-weight: bold;
             color: #dc2626;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
           }
-          .company-address { 
-            font-size: 12px; 
-            margin-bottom: 5px;
+          
+          .company-address {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 15px;
           }
-          .invoice-title { 
-            font-size: 16px; 
-            font-weight: bold; 
+          
+          .invoice-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #000;
             margin-top: 10px;
           }
-          .invoice-details { 
-            display: flex; 
-            justify-content: space-between; 
-            margin: 30px 0;
+          
+          .invoice-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            gap: 40px;
           }
-          .recipient-info { 
-            flex: 1; 
+          
+          .billing-info {
+            flex: 1;
+          }
+          
+          .company-info {
+            flex: 1;
+            text-align: right;
+          }
+          
+          .billing-info h3,
+          .company-info h3 {
             font-size: 12px;
-          }
-          .company-info { 
-            flex: 1; 
-            text-align: right; 
-            font-size: 12px;
-          }
-          table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin: 20px 0;
-          }
-          th, td { 
-            border: 1px solid black; 
-            padding: 8px; 
-            text-align: left;
-          }
-          th { 
-            background-color: #f5f5f5; 
+            margin-bottom: 10px;
             font-weight: bold;
           }
-          .amount-words { 
-            margin: 20px 0; 
-            font-size: 12px;
+          
+          .billing-info p,
+          .company-info p {
+            margin: 4px 0;
+            font-size: 11px;
           }
-          .footer-info { 
-            margin-top: 30px; 
-            font-size: 12px;
+          
+          .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            border: 2px solid #000;
           }
-          .signature { 
-            margin-top: 50px; 
-            text-align: right;
+          
+          .invoice-table th {
+            background: #f0f0f0;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+            border: 1px solid #000;
+          }
+          
+          .invoice-table td {
+            padding: 12px 8px;
+            text-align: center;
+            font-size: 11px;
+            border: 1px solid #000;
+          }
+          
+          .invoice-table tr:nth-child(even) {
+            background: #fafafa;
+          }
+          
+          .particulars {
+            text-align: left !important;
+            padding-left: 15px !important;
+          }
+          
+          .amount {
+            text-align: right !important;
+            padding-right: 15px !important;
+            font-weight: bold;
+          }
+          
+          .total-row {
+            background: #e0e0e0 !important;
+            font-weight: bold;
+          }
+          
+          .total-row td {
+            border-top: 2px solid #000;
+            font-size: 13px;
+          }
+          
+          .amount-words {
+            margin: 8px 0; /* Reduced margin to minimize gap */
+            padding: 15px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+          }
+          
+          .amount-words strong {
+            font-weight: bold;
+            color: #000;
+          }
+          
+          .footer-info {
+            margin: 30px 0;
+            font-size: 11px;
+            line-height: 1.6;
+          }
+          
+          .footer-info p {
+            margin: 6px 0;
+          }
+          
+          .bank-details {
+            font-weight: bold;
+            color: #000;
+          }
+          
+          .declaration {
+            margin: 25px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #dc2626;
+            font-size: 10px;
+            line-height: 1.5;
+          }
+          
+          .declaration h4 {
+            margin: 0 0 10px 0;
+            font-size: 11px;
+            font-weight: bold;
+          }
+          
+          .signature-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 40px;
+            padding-top: 20px;
+          }
+          
+          .signature-box {
+            text-align: center;
+            border: 1px solid #ccc;
+            padding: 20px;
+            width: 200px;
+            background: #fafafa;
+          }
+          
+          .signature-line {
+            border-bottom: 1px solid #000;
+            height: 60px;
+            margin: 20px 0 10px 0;
+            position: relative;
+          }
+          
+          .signature-text {
+            font-size: 10px;
+            color: #666;
+            margin-top: 5px;
+          }
+          
+          .company-signature {
+            font-weight: bold;
+            font-size: 12px;
+            margin-bottom: 2px; /* Reduced margin to minimize gap */
+          }
+          
+          @media print {
+            body { 
+              margin: 0;
+              padding: 0;
+            }
+            .invoice-container {
+              box-shadow: none;
+              border: 2px solid #000;
+            }
           }
         </style>
       </head>
       <body>
-        <div class="header">
-          <div class="company-name">SAHAYA WAREHOUSING COMPANY</div>
-          <div class="company-address">Plot No 562 Village Natkur Bhandari Farm Sarojini Nagar Lucknow – 226008</div>
-          <div class="invoice-title">TAX INVOICE</div>
-        </div>
-        
-        <div class="invoice-details">
-          <div class="recipient-info">
-            <p>To,</p>
-            <p>${invoiceData.recipientName},</p>
-            <p>${invoiceData.addressLine1}</p>
-            <p>${invoiceData.addressLine2}</p>
-            <p>${invoiceData.addressLine3}</p>
-            <p>GST NO: ${invoiceData.recipientGst}</p>
+        <div class="invoice-container">
+          <div class="inner-border">
+            <div class="header">
+              <div class="company-name">SAHAYA WAREHOUSING COMPANY</div>
+              <div class="company-address">
+                Plot No 562 Village Natkur Bhandari Farm Sarojini Nagar Lucknow – 226008
+              </div>
+              <div class="invoice-title">TAX INVOICE</div>
+            </div>
+            
+            <div class="invoice-details">
+              <div class="billing-info">
+                <h3>To,</h3>
+                <p><strong>${invoiceData.recipientName},</strong></p>
+                <p>${invoiceData.addressLine1}</p>
+                <p>${invoiceData.addressLine2}</p>
+                <p>${invoiceData.addressLine3}</p>
+                <p><strong>GST NO: ${invoiceData.recipientGst}</strong></p>
+              </div>
+              
+              <div class="company-info">
+                <p>GST No.: 09AEZFS6432B1ZL</p>
+                <p>PAN No.: AEZFS6432B</p>
+                <p>HSN Code: 997212</p>
+                <p><strong>Ref No: ${invoiceData.refNumber}</strong></p>
+                <p><strong>Date: ${invoiceData.invoiceDate}</strong></p>
+              </div>
+            </div>
+            
+            <table class="invoice-table">
+              <thead>
+                <tr>
+                  <th style="width: 55%;">Particulars Area Sqft</th>
+                  <th style="width: 20%;">Rate</th>
+                  <th style="width: 25%;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="particulars">Rented for ${invoiceData.rentedArea}</td>
+                  <td>${invoiceData.rentRate}</td>
+                  <td class="amount">${invoiceData.rentAmount}</td>
+                </tr>
+                <tr>
+                  <td class="particulars">SGST</td>
+                  <td>${invoiceData.sgstRate}%</td>
+                  <td class="amount">${invoiceData.sgstAmount}</td>
+                </tr>
+                <tr>
+                  <td class="particulars">CGST</td>
+                  <td>${invoiceData.cgstRate}%</td>
+                  <td class="amount">${invoiceData.cgstAmount}</td>
+                </tr>
+                <tr class="total-row">
+                  <td class="particulars"><strong>Grand Total</strong></td>
+                  <td></td>
+                  <td class="amount"><strong>${invoiceData.grandTotal}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <div class="amount-words">
+              <p><strong>Amount Chargeable (In Words):</strong> <strong>${invoiceData.grandTotalInWords}</strong></p>
+            </div>
+            
+            <div class="footer-info">
+              <p>Rent for the month of ${invoiceData.rentMonth || 'May'} '${invoiceData.rentYear || '25'}</p>
+              <p>Pan No.: AEZFS6432B</p>
+              <p class="bank-details">HDFC Bank Account No.: S0200081328200</p>
+              <p class="bank-details">IFSC Code: HDFC0000078</p>
+            </div>
+            
+            <div class="declaration">
+              <h4>Declaration:</h4>
+              <p>*TDS – Under section 194I should be deducted on gross bill value excluding service tax value (refer circular no. 1/2014, dated 13.01.2014 of income tax act 1961)</p>
+            </div>
+            
+            <div class="signature-section">
+              <div class="signature-box">
+                <p style="font-size: 11px; margin-bottom: 10px;">Customer's Seal and Signature For</p>
+                <div class="company-signature">Sahaya Warehousing Company</div>
+                <div class="signature-line">
+                  <img src="/sign.png" alt="Digital Signature" style="width: 80px; height: 40px; object-fit: contain; margin: 10px auto; display: block;" />
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="company-info">
-            <p>GST No.: 09AEZFS6432B1ZL</p>
-            <p>PAN No.: AEZFS6432B</p>
-            <p>HSN Code : 997212</p>
-            <p>Ref No ${invoiceData.refNumber} &nbsp;&nbsp;&nbsp; Date: ${invoiceData.invoiceDate}</p>
-          </div>
-        </div>
-        
-        <table>
-          <thead>
-            <tr>
-              <th>Particulars Area Sqft</th>
-              <th>Rate</th>
-              <th>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Rented for ${invoiceData.rentedArea}</td>
-              <td>${invoiceData.rentRate}</td>
-              <td>${invoiceData.rentAmount}</td>
-            </tr>
-            <tr>
-              <td>SGST</td>
-              <td>${invoiceData.sgstRate}%</td>
-              <td>${invoiceData.sgstAmount}</td>
-            </tr>
-            <tr>
-              <td>CGST</td>
-              <td>${invoiceData.cgstRate}%</td>
-              <td>${invoiceData.cgstAmount}</td>
-            </tr>
-            <tr>
-              <td><strong>Grand Total</strong></td>
-              <td></td>
-              <td><strong>${invoiceData.grandTotal}</strong></td>
-            </tr>
-          </tbody>
-        </table>
-        
-        <div class="amount-words">
-          <p><strong>Amount Chargeable (In Words) : ${invoiceData.grandTotalInWords}</strong></p>
-          <p>Rent for the month of May '25</p>
-        </div>
-        
-        <div class="footer-info">
-          <p>Pan No. : AEZFS6432B</p>
-          <p><strong>HDFC Bank Account No.</strong> : S0200081328200</p>
-          <p><strong>IFSC Code</strong> : HDFC0000078</p>
-          <p style="margin-top: 20px;">
-            <strong>Declaration :</strong><br>
-            *TDS – Under section 194I should be deducted on gross bill value excluding service tax value
-            (refer circular no. 1/2014, dated 13.01.2014 of income tax act 1961)
-          </p>
-        </div>
-        
-        <div class="signature">
-          <p>Customer's Seal and Signature For</p>
-          <p><strong>Sahaya Warehousing Company</strong></p>
-          <p>_____________________</p>
         </div>
       </body>
     </html>
