@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { InvoiceData } from '../utils/pdfGenerator-new';
+import toast from 'react-hot-toast';
 
 export default function EditInvoice() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -293,10 +294,16 @@ export default function EditInvoice() {
     try {
       // Save to localStorage so the main page can pick it up
       localStorage.setItem('savedInvoiceData', JSON.stringify(invoiceData));
-      alert('Data saved successfully! You can now go to the Main Invoice page to see the updated data.');
+      toast.success('Data saved successfully! You can now go to the Main Invoice page to see the updated data.', {
+        icon: '💾',
+        duration: 5000,
+      });
     } catch (error) {
       console.error('Error saving data:', error);
-      alert('Error saving data');
+      toast.error('Error saving data', {
+        icon: '❌',
+        duration: 4000,
+      });
     }
   };
 

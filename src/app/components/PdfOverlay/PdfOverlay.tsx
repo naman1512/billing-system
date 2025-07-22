@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 
 interface InvoiceData {
   recipientName: string;
@@ -46,12 +47,18 @@ Email: xxxxxx@gmail.com`
 
   const handleSendEmail = async () => {
     if (!recipientEmail.trim()) {
-      alert('Please enter recipient email');
+      toast.error('Please enter recipient email', {
+        icon: '📧',
+        duration: 3000,
+      });
       return;
     }
 
     if (!invoiceData) {
-      alert('Invoice data is missing');
+      toast.error('Invoice data is missing', {
+        icon: '❌',
+        duration: 3000,
+      });
       return;
     }
 
@@ -73,6 +80,10 @@ Email: xxxxxx@gmail.com`
 
       if (response.ok) {
         setEmailSent(true);
+        toast.success('Email sent successfully!', {
+          icon: '✅',
+          duration: 4000,
+        });
         setTimeout(() => {
           onClose();
           setEmailSent(false);
@@ -83,7 +94,10 @@ Email: xxxxxx@gmail.com`
       }
     } catch (error) {
       console.error('Error sending email:', error);
-      alert(`Failed to send email: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Failed to send email: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+        icon: '❌',
+        duration: 5000,
+      });
     } finally {
       setIsSending(false);
     }

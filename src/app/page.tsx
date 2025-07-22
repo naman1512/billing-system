@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import PdfOverlay from './components/PdfOverlay/PdfOverlay';
-import { generatePDF, InvoiceData } from './utils/pdfGenerator';
+import { generatePDF, InvoiceData } from './utils/pdfGenerator-new';
+import toast from 'react-hot-toast';
 
 export default function Home() {
   const [rentedArea, setRentedArea] = useState('26500');
@@ -12,6 +13,9 @@ export default function Home() {
   const [sgstAmount, setSgstAmount] = useState('42930');
   const [cgstRate, setCgstRate] = useState('9');
   const [cgstAmount, setCgstAmount] = useState('42930');
+  
+  // Ref to track if toast has been shown to prevent duplicates
+  const toastShownRef = useRef(false);
   
   // Calculate rent amount automatically
   const rentAmount = (parseInt(rentedArea || '0') * parseInt(rentRate || '0')).toString();
@@ -156,9 +160,13 @@ export default function Home() {
           parsedData.addressLine1 !== 'Plot No 552, Chandani Warehouse' ||
           parsedData.refNumber !== 'SWC/25-26/10';
         
-        if (hasChanges) {
+        if (hasChanges && !toastShownRef.current) {
+          toastShownRef.current = true;
           setTimeout(() => {
-            alert('Data loaded from Live Editor!');
+            toast.success('Data loaded from Live Editor!', {
+              icon: '📝',
+              duration: 3000,
+            });
           }, 500);
         }
       }
@@ -200,7 +208,10 @@ export default function Home() {
       setIsPdfOverlayOpen(true);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
+      toast.error('Failed to generate PDF. Please try again.', {
+        icon: '❌',
+        duration: 4000,
+      });
     }
   };
 
