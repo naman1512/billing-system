@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ConditionalNavbar from "./components/ConditionalNavbar";
 import { Toaster } from 'react-hot-toast';
+import AuthProvider from "./components/AuthProvider/AuthProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,10 +30,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-x-hidden w-full`}
       >
-        <ConditionalNavbar />
-        <div className="w-full overflow-x-hidden">
-          {children}
-        </div>
+        <AuthProvider>
+          <ConditionalNavbar />
+          <div className="w-full overflow-x-hidden">
+            {children}
+          </div>
+        </AuthProvider>
         <Toaster 
           position="top-right"
           toastOptions={{

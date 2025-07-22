@@ -111,8 +111,8 @@ export default function Login({ onLogin }: LoginProps) {
           <div className="mt-8 p-4 bg-gray-800/50 rounded-lg border border-gray-600">
             <p className="text-xs text-gray-400 mb-2">Demo Credentials:</p>
             <div className="space-y-1 text-xs">
-              <p className="text-gray-300">User ID: <span className="text-blue-400 font-mono">admin</span></p>
-              <p className="text-gray-300">Password: <span className="text-blue-400 font-mono">sahaya2025</span></p>
+              <p className="text-gray-300">User ID: <span className="text-blue-400 font-mono">UserId</span></p>
+              <p className="text-gray-300">Password: <span className="text-blue-400 font-mono">Password</span></p>
             </div>
           </div>
         </div>
