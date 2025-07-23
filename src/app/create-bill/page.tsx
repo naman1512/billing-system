@@ -138,8 +138,12 @@ export default function CreateBill() {
 
   // Load saved data from localStorage when component mounts
   useEffect(() => {
-    // Get default template (first company)
-    const defaultTemplate = getTemplateById('company1')!;
+    // Load saved company selection or default to company1
+    const savedCompanyId = localStorage.getItem('selectedCompanyId') || 'company1';
+    setSelectedCompanyId(savedCompanyId);
+    
+    // Get default template based on saved company selection
+    const defaultTemplate = getTemplateById(savedCompanyId)!;
     
     try {
       const savedData = localStorage.getItem('savedInvoiceData');
@@ -335,6 +339,9 @@ export default function CreateBill() {
     const template = getTemplateById(companyId);
     if (template) {
       setSelectedCompanyId(companyId);
+      
+      // Save selected company to localStorage so live editor can use it
+      localStorage.setItem('selectedCompanyId', companyId);
       
       // Update recipient details
       setRecipientName(template.recipientDetails.name);
