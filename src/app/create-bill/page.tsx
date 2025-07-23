@@ -419,7 +419,7 @@ export default function CreateBill() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black p-2 sm:p-4 lg:p-6 w-full overflow-x-hidden animate-pulse-slow">
         {/* Back to Home Button */}
-        <div className="max-w-3xl mx-auto mb-4">
+        <div className="mb-4">
           <Link href="/">
             <button className="group flex items-center space-x-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-all duration-300 hover:scale-105 border border-gray-600 hover:border-blue-500">
               <svg className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
