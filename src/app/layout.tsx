@@ -37,24 +37,52 @@ export default function RootLayout({
           </div>
         </AuthProvider>
         <Toaster 
-          position="top-right"
+          position="bottom-right"
           toastOptions={{
             duration: 4000,
             style: {
-              background: '#363636',
-              color: '#fff',
-              borderRadius: '10px',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+              background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+              color: '#1f2937',
+              borderRadius: '16px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              backdropFilter: 'blur(20px)',
+              fontSize: '14px',
+              fontWeight: '500',
+              padding: '16px 20px',
+              minWidth: '300px',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             },
             success: {
+              style: {
+                background: 'linear-gradient(135deg, #ffffff 0%, #f0fff4 100%)',
+                border: '1px solid rgba(34, 197, 94, 0.2)',
+                boxShadow: '0 25px 50px -12px rgba(34, 197, 94, 0.25), 0 0 0 1px rgba(34, 197, 94, 0.1)',
+              },
               iconTheme: {
-                primary: '#10B981',
+                primary: '#22c55e',
                 secondary: '#fff',
               },
             },
             error: {
+              style: {
+                background: 'linear-gradient(135deg, #ffffff 0%, #fef2f2 100%)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.25), 0 0 0 1px rgba(239, 68, 68, 0.1)',
+              },
               iconTheme: {
-                primary: '#EF4444',
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+            loading: {
+              style: {
+                background: 'linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)',
+                border: '1px solid rgba(99, 102, 241, 0.2)',
+                boxShadow: '0 25px 50px -12px rgba(99, 102, 241, 0.25), 0 0 0 1px rgba(99, 102, 241, 0.1)',
+              },
+              iconTheme: {
+                primary: '#6366f1',
                 secondary: '#fff',
               },
             },

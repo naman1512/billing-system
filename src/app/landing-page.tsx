@@ -13,27 +13,27 @@ export default function LandingPage({ onLogout }: LandingPageProps) {
       {onLogout && (
         <button
           onClick={onLogout}
-          className="absolute top-6 right-6 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+          className="absolute top-4 right-4 z-50 px-3 py-2 sm:px-4 sm:py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-medium rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900"
         >
-          <div className="flex items-center space-x-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex items-center space-x-1 sm:space-x-2">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            <span>Logout</span>
+            <span className="hidden xs:inline sm:inline">Logout</span>
           </div>
         </button>
       )}
 
-      <div className="max-w-4xl mx-auto text-center">
+      <div className="max-w-4xl mx-auto text-center pt-16 sm:pt-8">
         {/* Welcome Section */}
         <div className="mb-12 animate-fade-in-up">
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-4">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-white mb-4">
             Welcome
           </h1>
-          <h2 className="text-3xl md:text-5xl font-semibold text-blue-400 mb-8">
+          <h2 className="text-2xl sm:text-3xl md:text-5xl font-semibold text-blue-400 mb-8">
             Harsh Vardhan Bhandari
           </h2>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg sm:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed px-4">
             Your complete billing platform solution for seamless invoice management and business operations.
           </p>
         </div>

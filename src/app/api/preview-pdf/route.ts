@@ -1,26 +1,28 @@
 import { NextResponse } from 'next/server';
 import { generateInvoiceHTML } from '../../utils/pdfGenerator-new';
+import { getTemplateById } from '../../utils/companyTemplates';
 
 export async function GET() {
   try {
+    const defaultTemplate = getTemplateById('company1')!;
     // Default invoice data for testing
     const testInvoiceData = {
-      recipientName: 'Rackup',
-      addressLine1: 'Plot No 552, Chandani Warehouse',
-      addressLine2: 'Village Parvar Poorab, Sarojini Nagar,',
-      addressLine3: 'Lucknow, Uttar Pradesh 226008',
-      recipientGst: '09CVWPG8839A2Z0',
-      refNumber: 'SWC/25-26/10',
+      recipientName: defaultTemplate.recipientDetails.name,
+      addressLine1: defaultTemplate.recipientDetails.addressLine1,
+      addressLine2: defaultTemplate.recipientDetails.addressLine2,
+      addressLine3: defaultTemplate.recipientDetails.addressLine3,
+      recipientGst: defaultTemplate.recipientDetails.gstNumber,
+      refNumber: defaultTemplate.defaultRefNumberPrefix + '/10',
       invoiceDate: '1 May 2025',
-      rentedArea: '26500',
-      rentRate: '18',
-      rentAmount: '477000',
-      sgstRate: '9',
-      sgstAmount: '42930',
-      cgstRate: '9',
-      cgstAmount: '42930',
-      grandTotal: '562860',
-      grandTotalInWords: 'Five Lakh Sixty Two Thousand Eight Hundred Sixty Only'
+      rentedArea: defaultTemplate.billDetails.rentedArea,
+      rentRate: defaultTemplate.billDetails.rentRate,
+      rentAmount: (parseInt(defaultTemplate.billDetails.rentedArea) * parseInt(defaultTemplate.billDetails.rentRate)).toString(),
+      sgstRate: defaultTemplate.billDetails.sgstRate,
+      sgstAmount: ((parseInt(defaultTemplate.billDetails.rentedArea) * parseInt(defaultTemplate.billDetails.rentRate)) * parseInt(defaultTemplate.billDetails.sgstRate) / 100).toString(),
+      cgstRate: defaultTemplate.billDetails.cgstRate,
+      cgstAmount: ((parseInt(defaultTemplate.billDetails.rentedArea) * parseInt(defaultTemplate.billDetails.rentRate)) * parseInt(defaultTemplate.billDetails.cgstRate) / 100).toString(),
+      grandTotal: ((parseInt(defaultTemplate.billDetails.rentedArea) * parseInt(defaultTemplate.billDetails.rentRate)) * (1 + (parseInt(defaultTemplate.billDetails.sgstRate) + parseInt(defaultTemplate.billDetails.cgstRate)) / 100)).toString(),
+      grandTotalInWords: 'Amount calculation based on template values'
     };
 
     // Generate the HTML content with current CSS

@@ -3,16 +3,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { InvoiceData } from '../utils/pdfGenerator-new';
 import toast from 'react-hot-toast';
+import { getTemplateById } from '../utils/companyTemplates';
 
 export default function EditInvoice() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const defaultTemplate = getTemplateById('company1')!;
   const [invoiceData, setInvoiceData] = useState<InvoiceData>({
-    recipientName: 'Rackup',
-    addressLine1: 'Plot No 552, Chandani Warehouse',
-    addressLine2: 'Village Parvar Poorab, Sarojini Nagar,',
-    addressLine3: 'Lucknow, Uttar Pradesh 226008',
-    recipientGst: '09CVWPG8839A2Z0',
-    refNumber: 'SWC/25-26/10',
+    recipientName: defaultTemplate.recipientDetails.name,
+    addressLine1: defaultTemplate.recipientDetails.addressLine1,
+    addressLine2: defaultTemplate.recipientDetails.addressLine2,
+    addressLine3: defaultTemplate.recipientDetails.addressLine3,
+    recipientGst: defaultTemplate.recipientDetails.gstNumber,
+    refNumber: defaultTemplate.defaultRefNumberPrefix + '/10',
     invoiceDate: '1 May 2025',
     rentedArea: '26500',
     rentRate: '18',
