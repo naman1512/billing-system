@@ -5,19 +5,19 @@ import Image from 'next/image';
 import Link from 'next/link';
 import PdfOverlay from '../components/PdfOverlay/PdfOverlay';
 import { generatePDF, InvoiceData } from '../utils/pdfGenerator-new';
-import { getTemplateById, getTemplateOptions } from '../utils/companyTemplates';
+import { getTemplateById, getTemplateOptions, } from '../utils/companyTemplates';
 import toast from 'react-hot-toast';
 
 export default function CreateBill() {
   // Company template selection state
   const [selectedCompanyId, setSelectedCompanyId] = useState('company1');
   
-  const [rentedArea, setRentedArea] = useState('26500');
-  const [rentRate, setRentRate] = useState('18');
-  const [sgstRate, setSgstRate] = useState('9');
-  const [sgstAmount, setSgstAmount] = useState('42930');
-  const [cgstRate, setCgstRate] = useState('9');
-  const [cgstAmount, setCgstAmount] = useState('42930');
+  const [rentedArea, setRentedArea] = useState('');
+  const [rentRate, setRentRate] = useState('');
+  const [sgstRate, setSgstRate] = useState('');
+  const [sgstAmount, setSgstAmount] = useState('');
+  const [cgstRate, setCgstRate] = useState('');
+  const [cgstAmount, setCgstAmount] = useState('');
   
   // Ref to track if toast has been shown to prevent duplicates
   const toastShownRef = useRef(false);
@@ -84,14 +84,14 @@ export default function CreateBill() {
   const grandTotalInWords = numberToWords(parseInt(grandTotal || '0')) + ' Only';
   
   // Recipient information states
-  const [recipientName, setRecipientName] = useState('Rackup');
-  const [addressLine1, setAddressLine1] = useState('Plot No 552, Chandani Warehouse');
-  const [addressLine2, setAddressLine2] = useState('Village Parvar Poorab, Sarojini Nagar,');
-  const [addressLine3, setAddressLine3] = useState('Lucknow, Uttar Pradesh 226008');
-  const [recipientGst, setRecipientGst] = useState('09CVWPG8839A2Z0');
+  const [recipientName, setRecipientName] = useState('');
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [addressLine3, setAddressLine3] = useState('');
+  const [recipientGst, setRecipientGst] = useState('');
   
   // Invoice details states
-  const [refNumber, setRefNumber] = useState('SWC/25-26/10');
+  const [refNumber, setRefNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('1 May 2025');
   
   // Rent month/year states
@@ -138,22 +138,29 @@ export default function CreateBill() {
 
   // Load saved data from localStorage when component mounts
   useEffect(() => {
+    // Load saved company selection or default to company1
+    const savedCompanyId = localStorage.getItem('selectedCompanyId') || 'company1';
+    setSelectedCompanyId(savedCompanyId);
+    
+    // Get default template based on saved company selection
+    const defaultTemplate = getTemplateById(savedCompanyId)!;
+    
     try {
       const savedData = localStorage.getItem('savedInvoiceData');
       if (savedData) {
         const parsedData = JSON.parse(savedData);
         // Update all the state variables with saved data
-        setRecipientName(parsedData.recipientName || 'Rackup');
-        setAddressLine1(parsedData.addressLine1 || 'Plot No 552, Chandani Warehouse');
-        setAddressLine2(parsedData.addressLine2 || 'Village Parvar Poorab, Sarojini Nagar,');
-        setAddressLine3(parsedData.addressLine3 || 'Lucknow, Uttar Pradesh 226008');
-        setRecipientGst(parsedData.recipientGst || '09CVWPG8839A2Z0');
-        setRefNumber(parsedData.refNumber || 'SWC/25-26/10');
+        setRecipientName(parsedData.recipientName || defaultTemplate.recipientDetails.name);
+        setAddressLine1(parsedData.addressLine1 || defaultTemplate.recipientDetails.addressLine1);
+        setAddressLine2(parsedData.addressLine2 || defaultTemplate.recipientDetails.addressLine2);
+        setAddressLine3(parsedData.addressLine3 || defaultTemplate.recipientDetails.addressLine3);
+        setRecipientGst(parsedData.recipientGst || defaultTemplate.recipientDetails.gstNumber);
+        setRefNumber(parsedData.refNumber || defaultTemplate.defaultRefNumberPrefix + '/10');
         setInvoiceDate(parsedData.invoiceDate || '1 May 2025');
-        setRentedArea(parsedData.rentedArea || '26500');
-        setRentRate(parsedData.rentRate || '18');
-        setSgstRate(parsedData.sgstRate || '9');
-        setCgstRate(parsedData.cgstRate || '9');
+        setRentedArea(parsedData.rentedArea || defaultTemplate.billDetails.rentedArea);
+        setRentRate(parsedData.rentRate || defaultTemplate.billDetails.rentRate);
+        setSgstRate(parsedData.sgstRate || defaultTemplate.billDetails.sgstRate);
+        setCgstRate(parsedData.cgstRate || defaultTemplate.billDetails.cgstRate);
         
         // Update rent month/year if provided
         if (parsedData.rentMonth) setRentMonth(parsedData.rentMonth);
@@ -161,9 +168,9 @@ export default function CreateBill() {
         
         // Show a brief confirmation that data was loaded
         const hasChanges = 
-          parsedData.recipientName !== 'Rackup' ||
-          parsedData.addressLine1 !== 'Plot No 552, Chandani Warehouse' ||
-          parsedData.refNumber !== 'SWC/25-26/10';
+          parsedData.recipientName !== defaultTemplate.recipientDetails.name ||
+          parsedData.addressLine1 !== defaultTemplate.recipientDetails.addressLine1 ||
+          parsedData.refNumber !== defaultTemplate.defaultRefNumberPrefix + '/10';
         
         if (hasChanges && !toastShownRef.current) {
           toastShownRef.current = true;
@@ -174,6 +181,18 @@ export default function CreateBill() {
             });
           }, 500);
         }
+      } else {
+        // No saved data, use default template values
+        setRecipientName(defaultTemplate.recipientDetails.name);
+        setAddressLine1(defaultTemplate.recipientDetails.addressLine1);
+        setAddressLine2(defaultTemplate.recipientDetails.addressLine2);
+        setAddressLine3(defaultTemplate.recipientDetails.addressLine3);
+        setRecipientGst(defaultTemplate.recipientDetails.gstNumber);
+        setRefNumber(defaultTemplate.defaultRefNumberPrefix + '/10');
+        setRentedArea(defaultTemplate.billDetails.rentedArea);
+        setRentRate(defaultTemplate.billDetails.rentRate);
+        setSgstRate(defaultTemplate.billDetails.sgstRate);
+        setCgstRate(defaultTemplate.billDetails.cgstRate);
       }
     } catch (error) {
       console.error('Error loading saved data:', error);
@@ -321,6 +340,9 @@ export default function CreateBill() {
     if (template) {
       setSelectedCompanyId(companyId);
       
+      // Save selected company to localStorage so live editor can use it
+      localStorage.setItem('selectedCompanyId', companyId);
+      
       // Update recipient details
       setRecipientName(template.recipientDetails.name);
       setAddressLine1(template.recipientDetails.addressLine1);
@@ -397,7 +419,7 @@ export default function CreateBill() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black p-2 sm:p-4 lg:p-6 w-full overflow-x-hidden animate-pulse-slow">
         {/* Back to Home Button */}
-        <div className="max-w-3xl mx-auto mb-4">
+        <div className="mb-4">
           <Link href="/">
             <button className="group flex items-center space-x-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-all duration-300 hover:scale-105 border border-gray-600 hover:border-blue-500">
               <svg className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
