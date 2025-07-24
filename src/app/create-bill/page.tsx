@@ -90,11 +90,11 @@ export default function CreateBill() {
   
   // Invoice details states
   const [refNumber, setRefNumber] = useState('');
-  const [invoiceDate, setInvoiceDate] = useState('1 May 2025');
+  const [invoiceDate, setInvoiceDate] = useState(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }));
   
   // Rent month/year states
-  const [rentMonth, setRentMonth] = useState('May');
-  const [rentYear, setRentYear] = useState('25');
+  const [rentMonth, setRentMonth] = useState(new Date().toLocaleDateString('en-GB', { month: 'long' }));
+  const [rentYear, setRentYear] = useState(new Date().getFullYear().toString().slice(-2));
   const [rentDescription, setRentDescription] = useState('');
 
   // Sync rent month/year with invoice date
@@ -149,6 +149,18 @@ export default function CreateBill() {
       const savedData = localStorage.getItem('savedInvoiceData');
       if (savedData) {
         const parsedData = JSON.parse(savedData);
+        
+        // Migration: Update old hardcoded dates to current dates if they match the old values
+        if (parsedData.invoiceDate && parsedData.invoiceDate.includes('May 2025')) {
+          parsedData.invoiceDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+        if (parsedData.rentMonth === 'May') {
+          parsedData.rentMonth = new Date().toLocaleDateString('en-GB', { month: 'long' });
+        }
+        if (parsedData.rentYear === '25') {
+          parsedData.rentYear = new Date().getFullYear().toString().slice(-2);
+        }
+        
         // Update all the state variables with saved data
         setRecipientName(parsedData.recipientName || defaultTemplate.recipientDetails.name);
         setAddressLine1(parsedData.addressLine1 || defaultTemplate.recipientDetails.addressLine1);
@@ -156,7 +168,7 @@ export default function CreateBill() {
         setAddressLine3(parsedData.addressLine3 || defaultTemplate.recipientDetails.addressLine3);
         setRecipientGst(parsedData.recipientGst || defaultTemplate.recipientDetails.gstNumber);
         setRefNumber(parsedData.refNumber || defaultTemplate.defaultRefNumberPrefix + '/10');
-        setInvoiceDate(parsedData.invoiceDate || '1 May 2025');
+        setInvoiceDate(parsedData.invoiceDate || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }));
         setRentedArea(parsedData.rentedArea || defaultTemplate.billDetails.rentedArea);
         setRentRate(parsedData.rentRate || defaultTemplate.billDetails.rentRate);
         setRentAmount(parsedData.rentAmount || (parseInt(defaultTemplate.billDetails.rentedArea || '0') * parseInt(defaultTemplate.billDetails.rentRate || '0')).toString());

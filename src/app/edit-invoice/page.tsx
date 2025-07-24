@@ -16,7 +16,7 @@ export default function EditInvoice() {
     addressLine3: '',
     recipientGst: '',
     refNumber: '',
-    invoiceDate: '1 May 2025',
+    invoiceDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
     rentedArea: '',
     rentRate: '',
     rentAmount: '',
@@ -26,8 +26,8 @@ export default function EditInvoice() {
     cgstAmount: '',
     grandTotal: '',
     grandTotalInWords: '',
-    rentMonth: 'May',
-    rentYear: '25',
+    rentMonth: new Date().toLocaleDateString('en-GB', { month: 'long' }),
+    rentYear: new Date().getFullYear().toString().slice(-2),
     rentDescription: ''
   });
 
@@ -98,7 +98,22 @@ export default function EditInvoice() {
       if (savedData) {
         const parsedData = JSON.parse(savedData);
         console.log('Live Editor - Loading saved data:', parsedData.recipientName);
+        
+        // Migration: Update old hardcoded dates to current dates if they match the old values
+        if (parsedData.invoiceDate && parsedData.invoiceDate.includes('May 2025')) {
+          parsedData.invoiceDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+        if (parsedData.rentMonth === 'May') {
+          parsedData.rentMonth = new Date().toLocaleDateString('en-GB', { month: 'long' });
+        }
+        if (parsedData.rentYear === '25') {
+          parsedData.rentYear = new Date().getFullYear().toString().slice(-2);
+        }
+        
         setInvoiceData(parsedData);
+        
+        // Save the migrated data back to localStorage
+        localStorage.setItem('savedInvoiceData', JSON.stringify(parsedData));
       } else {
         // No saved data, check what company is selected in main page or default to company1
         const defaultTemplate = getTemplateById(selectedCompanyId)!;
@@ -118,7 +133,7 @@ export default function EditInvoice() {
           addressLine3: defaultTemplate.recipientDetails.addressLine3,
           recipientGst: defaultTemplate.recipientDetails.gstNumber,
           refNumber: defaultTemplate.defaultRefNumberPrefix + '/10',
-          invoiceDate: '1 May 2025',
+          invoiceDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
           rentedArea: defaultTemplate.billDetails.rentedArea,
           rentRate: defaultTemplate.billDetails.rentRate,
           rentAmount,
@@ -128,8 +143,8 @@ export default function EditInvoice() {
           cgstAmount,
           grandTotal,
           grandTotalInWords,
-          rentMonth: 'May',
-          rentYear: '25',
+          rentMonth: new Date().toLocaleDateString('en-GB', { month: 'long' }),
+          rentYear: new Date().getFullYear().toString().slice(-2),
           rentDescription: ''
         });
       }
@@ -296,7 +311,7 @@ export default function EditInvoice() {
 
     // Footer
     currentY += 20;
-    ctx.fillText(invoiceData.rentDescription || `Rent for the month of ${invoiceData.rentMonth || 'May'} '${invoiceData.rentYear || '25'}`, tableX, currentY);
+    ctx.fillText(invoiceData.rentDescription || `Rent for the month of ${invoiceData.rentMonth || new Date().toLocaleDateString('en-GB', { month: 'long' })} '${invoiceData.rentYear || new Date().getFullYear().toString().slice(-2)}`, tableX, currentY);
     currentY += 15;
     ctx.fillText('Pan No. : AEZFS6432B', tableX, currentY);
     currentY += 15;
@@ -365,12 +380,12 @@ export default function EditInvoice() {
   const handleClearSavedData = () => {
     try {
       localStorage.removeItem('savedInvoiceData');
-      toast.success('Saved data cleared! Reloading with fresh template data...', {
+      toast.success('Saved data cleared! Reloading with current date values...', {
         icon: '🗑️',
         duration: 3000,
       });
       
-      // Reload the page to get fresh template data
+      // Reload the page to get fresh template data with current dates
       setTimeout(() => {
         window.location.reload();
       }, 1000);
@@ -537,7 +552,7 @@ export default function EditInvoice() {
 
     // Footer
     currentY += 20;
-    ctx.fillText(invoiceData.rentDescription || `Rent for the month of ${invoiceData.rentMonth || 'May'} '${invoiceData.rentYear || '25'}`, tableX, currentY);
+    ctx.fillText(invoiceData.rentDescription || `Rent for the month of ${invoiceData.rentMonth || new Date().toLocaleDateString('en-GB', { month: 'long' })} '${invoiceData.rentYear || new Date().getFullYear().toString().slice(-2)}`, tableX, currentY);
     currentY += 15;
     ctx.fillText('Pan No. : AEZFS6432B', tableX, currentY);
     currentY += 15;
@@ -747,7 +762,7 @@ export default function EditInvoice() {
                   <label htmlFor="rentMonth" className="block text-sm font-medium mb-1 text-gray-300">Rent Month</label>
                   <select
                     id="rentMonth"
-                    value={invoiceData.rentMonth || 'May'}
+                    value={invoiceData.rentMonth || new Date().toLocaleDateString('en-GB', { month: 'long' })}
                     onChange={(e) => handleInputChange('rentMonth', e.target.value)}
                     className="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 hover:border-blue-400"
                   >
@@ -770,7 +785,7 @@ export default function EditInvoice() {
                   <input
                     id="rentYear"
                     type="text"
-                    value={invoiceData.rentYear || '25'}
+                    value={invoiceData.rentYear || new Date().getFullYear().toString().slice(-2)}
                     onChange={(e) => handleInputChange('rentYear', e.target.value)}
                     className="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 hover:border-blue-400"
                     placeholder="e.g., 25"
@@ -786,7 +801,7 @@ export default function EditInvoice() {
                 <p className="text-gray-300">CGST Amount: <span className="text-blue-400 font-medium">₹{invoiceData.cgstAmount}</span></p>
                 <p className="font-bold text-white">Grand Total: <span className="text-yellow-400">₹{invoiceData.grandTotal}</span></p>
                 <p className="text-sm text-gray-400 mt-2">Amount in Words: <span className="text-gray-300">{invoiceData.grandTotalInWords}</span></p>
-                <p className="text-sm text-gray-400">Rent for: <span className="text-gray-300">{invoiceData.rentMonth || 'May'} &apos;{invoiceData.rentYear || '25'}</span></p>
+                <p className="text-sm text-gray-400">Rent for: <span className="text-gray-300">{invoiceData.rentMonth || new Date().toLocaleDateString('en-GB', { month: 'long' })} &apos;{invoiceData.rentYear || new Date().getFullYear().toString().slice(-2)}</span></p>
               </div>
 
               <div className="grid grid-cols-3 gap-3">

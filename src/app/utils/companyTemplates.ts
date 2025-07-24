@@ -34,7 +34,7 @@ export const companyTemplates: CompanyTemplate[] = [
       sgstRate: '9',
       cgstRate: '9'
     },
-    defaultRefNumberPrefix: 'VL1/25-26'
+    defaultRefNumberPrefix: 'SWC/25-26'
   },
   {
     id: 'company2',
@@ -52,7 +52,7 @@ export const companyTemplates: CompanyTemplate[] = [
       sgstRate: '9',
       cgstRate: '9'
     },
-    defaultRefNumberPrefix: 'VL2/25-26'
+    defaultRefNumberPrefix: 'SWC/25-26'
   },
   {
     id: 'company3',
@@ -70,7 +70,7 @@ export const companyTemplates: CompanyTemplate[] = [
       sgstRate: '9',
       cgstRate: '9'
     },
-    defaultRefNumberPrefix: 'UA/25-26'
+    defaultRefNumberPrefix: 'SWC/25-26'
   },
   {
     id: 'company4',
@@ -88,7 +88,7 @@ export const companyTemplates: CompanyTemplate[] = [
       sgstRate: '9',
       cgstRate: '9'
     },
-    defaultRefNumberPrefix: 'CI1/25-26'
+    defaultRefNumberPrefix: 'SWC/25-26'
   },
   {
     id: 'company5',
@@ -106,7 +106,7 @@ export const companyTemplates: CompanyTemplate[] = [
       sgstRate: '9',
       cgstRate: '9'
     },
-    defaultRefNumberPrefix: 'CI2/25-26'
+    defaultRefNumberPrefix: 'SWC/25-26'
   },
   {
     id: 'company6',
@@ -124,7 +124,7 @@ export const companyTemplates: CompanyTemplate[] = [
       sgstRate: '9',
       cgstRate: '9'
     },
-    defaultRefNumberPrefix: 'KDG/25-26'
+    defaultRefNumberPrefix: 'SWC/25-26'
   },
   {
     id: 'company7',
@@ -142,7 +142,7 @@ export const companyTemplates: CompanyTemplate[] = [
       sgstRate: '9',
       cgstRate: '9'
     },
-    defaultRefNumberPrefix: 'KDG2/25-26'
+    defaultRefNumberPrefix: 'SWC/25-26'
   }
 ];
 
