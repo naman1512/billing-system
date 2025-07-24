@@ -16,8 +16,9 @@ export interface InvoiceData {
   cgstAmount: string;
   grandTotal: string;
   grandTotalInWords: string;
-  rentMonth?: string;
-  rentYear?: string;
+  rentMonth: string;
+  rentYear: string;
+  rentDescription: string;
 }
 
 // Import jsPDF dynamically to avoid SSR issues
@@ -257,7 +258,7 @@ export const generatePDFBuffer = async (invoiceData: InvoiceData): Promise<Buffe
     // Additional information
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(9);
-    pdf.text(`Rent for the month of ${invoiceData.rentMonth || 'May'} '${invoiceData.rentYear || '25'}`, margin + 5, currentY);
+    pdf.text(invoiceData.rentDescription || `Rent for the month of ${invoiceData.rentMonth} '${invoiceData.rentYear}`, margin + 5, currentY);
     
     currentY += 8;
     pdf.text('Pan No.: AEZFS6432B', margin + 5, currentY);
@@ -633,7 +634,7 @@ export const generateInvoiceHTML = (invoiceData: InvoiceData): string => {
             </div>
             
             <div class="footer-info">
-              <p>Rent for the month of ${invoiceData.rentMonth || 'May'} '${invoiceData.rentYear || '25'}</p>
+              <p>${invoiceData.rentDescription || `Rent for the month of ${invoiceData.rentMonth} '${invoiceData.rentYear}`}</p>
               <p>Pan No.: AEZFS6432B</p>
               <p class="bank-details">HDFC Bank Account No.: S0200081328200</p>
               <p class="bank-details">IFSC Code: HDFC0000078</p>

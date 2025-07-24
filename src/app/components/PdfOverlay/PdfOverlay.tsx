@@ -20,6 +20,9 @@ interface InvoiceData {
   cgstAmount: string;
   grandTotal: string;
   grandTotalInWords: string;
+  rentMonth: string;
+  rentYear: string;
+  rentDescription: string;
 }
 
 interface PdfOverlayProps {
@@ -247,7 +250,7 @@ Email: xxxxxx@gmail.com`
             pdf.setFontSize(10);
             pdf.text(`Amount Chargeable (In Words) : ${invoiceData.grandTotalInWords}`, leftColX, currentY);
             currentY += 6;
-            pdf.text(`Rent for the month of May '25`, leftColX, currentY);
+            pdf.text(invoiceData.rentDescription || `Rent for the month of ${invoiceData.rentMonth} '${invoiceData.rentYear}`, leftColX, currentY);
             currentY += 6;
             pdf.text('Pan No. : AEZFS6432B', leftColX, currentY);
             currentY += 6;

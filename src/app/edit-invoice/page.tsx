@@ -27,7 +27,8 @@ export default function EditInvoice() {
     grandTotal: '',
     grandTotalInWords: '',
     rentMonth: 'May',
-    rentYear: '25'
+    rentYear: '25',
+    rentDescription: ''
   });
 
   // Function to convert number to words
@@ -128,7 +129,8 @@ export default function EditInvoice() {
           grandTotal,
           grandTotalInWords,
           rentMonth: 'May',
-          rentYear: '25'
+          rentYear: '25',
+          rentDescription: ''
         });
       }
     } catch (error) {
@@ -294,7 +296,7 @@ export default function EditInvoice() {
 
     // Footer
     currentY += 20;
-    ctx.fillText(`Rent for the month of ${invoiceData.rentMonth || 'May'} '${invoiceData.rentYear || '25'}`, tableX, currentY);
+    ctx.fillText(invoiceData.rentDescription || `Rent for the month of ${invoiceData.rentMonth || 'May'} '${invoiceData.rentYear || '25'}`, tableX, currentY);
     currentY += 15;
     ctx.fillText('Pan No. : AEZFS6432B', tableX, currentY);
     currentY += 15;
@@ -535,7 +537,7 @@ export default function EditInvoice() {
 
     // Footer
     currentY += 20;
-    ctx.fillText(`Rent for the month of ${invoiceData.rentMonth || 'May'} '${invoiceData.rentYear || '25'}`, tableX, currentY);
+    ctx.fillText(invoiceData.rentDescription || `Rent for the month of ${invoiceData.rentMonth || 'May'} '${invoiceData.rentYear || '25'}`, tableX, currentY);
     currentY += 15;
     ctx.fillText('Pan No. : AEZFS6432B', tableX, currentY);
     currentY += 15;

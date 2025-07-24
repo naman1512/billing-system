@@ -14,6 +14,7 @@ export default function CreateBill() {
   
   const [rentedArea, setRentedArea] = useState('');
   const [rentRate, setRentRate] = useState('');
+  const [rentAmount, setRentAmount] = useState('');
   const [sgstRate, setSgstRate] = useState('');
   const [sgstAmount, setSgstAmount] = useState('');
   const [cgstRate, setCgstRate] = useState('');
@@ -21,9 +22,6 @@ export default function CreateBill() {
   
   // Ref to track if toast has been shown to prevent duplicates
   const toastShownRef = useRef(false);
-  
-  // Calculate rent amount automatically
-  const rentAmount = (parseInt(rentedArea || '0') * parseInt(rentRate || '0')).toString();
   
   // Calculate grand total automatically
   const grandTotal = (
@@ -97,6 +95,7 @@ export default function CreateBill() {
   // Rent month/year states
   const [rentMonth, setRentMonth] = useState('May');
   const [rentYear, setRentYear] = useState('25');
+  const [rentDescription, setRentDescription] = useState('');
 
   // Sync rent month/year with invoice date
   useEffect(() => {
@@ -131,6 +130,7 @@ export default function CreateBill() {
   const [isRentMonthDialog, setIsRentMonthDialog] = useState(false);
   const [tempRentMonth, setTempRentMonth] = useState('');
   const [tempRentYear, setTempRentYear] = useState('');
+  const [tempRentDescription, setTempRentDescription] = useState('');
   
   // PDF overlay state
   const [isPdfOverlayOpen, setIsPdfOverlayOpen] = useState(false);
@@ -159,12 +159,14 @@ export default function CreateBill() {
         setInvoiceDate(parsedData.invoiceDate || '1 May 2025');
         setRentedArea(parsedData.rentedArea || defaultTemplate.billDetails.rentedArea);
         setRentRate(parsedData.rentRate || defaultTemplate.billDetails.rentRate);
+        setRentAmount(parsedData.rentAmount || (parseInt(defaultTemplate.billDetails.rentedArea || '0') * parseInt(defaultTemplate.billDetails.rentRate || '0')).toString());
         setSgstRate(parsedData.sgstRate || defaultTemplate.billDetails.sgstRate);
         setCgstRate(parsedData.cgstRate || defaultTemplate.billDetails.cgstRate);
         
         // Update rent month/year if provided
         if (parsedData.rentMonth) setRentMonth(parsedData.rentMonth);
         if (parsedData.rentYear) setRentYear(parsedData.rentYear);
+        if (parsedData.rentDescription) setRentDescription(parsedData.rentDescription);
         
         // Show a brief confirmation that data was loaded
         const hasChanges = 
@@ -191,6 +193,7 @@ export default function CreateBill() {
         setRefNumber(defaultTemplate.defaultRefNumberPrefix + '/10');
         setRentedArea(defaultTemplate.billDetails.rentedArea);
         setRentRate(defaultTemplate.billDetails.rentRate);
+        setRentAmount((parseInt(defaultTemplate.billDetails.rentedArea || '0') * parseInt(defaultTemplate.billDetails.rentRate || '0')).toString());
         setSgstRate(defaultTemplate.billDetails.sgstRate);
         setCgstRate(defaultTemplate.billDetails.cgstRate);
       }
@@ -198,6 +201,18 @@ export default function CreateBill() {
       console.error('Error loading saved data:', error);
     }
   }, []);
+
+  // Auto-calculate rent amount when area or rate changes (unless manually overridden)
+  useEffect(() => {
+    const calculatedRentAmount = (parseInt(rentedArea || '0') * parseInt(rentRate || '0')).toString();
+    // Only update if rentAmount is empty or matches the previous calculation
+    setRentAmount(prev => {
+      if (!prev || prev === '0' || prev === calculatedRentAmount) {
+        return calculatedRentAmount;
+      }
+      return prev; // Keep manual override
+    });
+  }, [rentedArea, rentRate]);
 
   // Auto-calculate SGST and CGST amounts based on rent amount and rates
   useEffect(() => {
@@ -237,7 +252,10 @@ export default function CreateBill() {
         cgstRate,
         cgstAmount,
         grandTotal,
-        grandTotalInWords
+        grandTotalInWords,
+        rentMonth,
+        rentYear,
+        rentDescription
       };
 
       const url = await generatePDF(invoiceData);
@@ -286,6 +304,7 @@ export default function CreateBill() {
   const openRentMonthDialog = () => {
     setTempRentMonth(rentMonth);
     setTempRentYear(rentYear);
+    setTempRentDescription(rentDescription);
     setIsRentMonthDialog(true);
   };
 
@@ -308,6 +327,9 @@ export default function CreateBill() {
         break;
       case 'rentRate':
         setRentRate(dialogValue);
+        break;
+      case 'rentAmount':
+        setRentAmount(dialogValue);
         break;
       case 'sgstRate':
         setSgstRate(dialogValue);
@@ -353,6 +375,7 @@ export default function CreateBill() {
       // Update bill details
       setRentedArea(template.billDetails.rentedArea);
       setRentRate(template.billDetails.rentRate);
+      setRentAmount((parseInt(template.billDetails.rentedArea || '0') * parseInt(template.billDetails.rentRate || '0')).toString());
       setSgstRate(template.billDetails.sgstRate);
       setCgstRate(template.billDetails.cgstRate);
       
@@ -401,6 +424,7 @@ export default function CreateBill() {
   const handleRentMonthSave = () => {
     setRentMonth(tempRentMonth);
     setRentYear(tempRentYear);
+    setRentDescription(tempRentDescription);
     setIsRentMonthDialog(false);
   };
 
@@ -408,6 +432,7 @@ export default function CreateBill() {
     setIsRentMonthDialog(false);
     setTempRentMonth('');
     setTempRentYear('');
+    setTempRentDescription('');
   };
 
   const PencilIcon = () => (
@@ -537,8 +562,11 @@ export default function CreateBill() {
                 </div>
               </td>
               <td className="p-3">
-                <div className="flex items-center justify-center">
-                  <span className="hover:text-yellow-300 transition-colors duration-300 font-semibold">{rentAmount}</span>
+                <div className="flex items-center justify-center group">
+                  <span className="group-hover:text-yellow-300 transition-colors duration-300 font-semibold">{rentAmount}</span>
+                  <button onClick={() => openDialog('rentAmount', rentAmount, 'Edit Rent Amount')} aria-label="Edit rent amount" className="hover:bg-blue-500/20 p-1 rounded-full transition-all duration-300 hover:rotate-12">
+                    <PencilIcon />
+                  </button>
                 </div>
               </td>
             </tr>
@@ -596,8 +624,8 @@ export default function CreateBill() {
           Amount Chargeable (In Words) : <strong className="text-yellow-300">{grandTotalInWords}</strong>
         </p>
         <p className="flex items-center hover:text-green-300 transition-colors duration-300">
-          <span>Rent for the month of {rentMonth} &#39;{rentYear}</span>
-          <button onClick={() => openRentMonthDialog()} aria-label="Edit rent month and year" className="hover:bg-blue-500/20 p-1 rounded-full transition-all duration-300 hover:rotate-12 ml-1">
+          <span>{rentDescription || `Rent for the month of ${rentMonth} '${rentYear}`}</span>
+          <button onClick={() => openRentMonthDialog()} aria-label="Edit rent description" className="hover:bg-blue-500/20 p-1 rounded-full transition-all duration-300 hover:rotate-12 ml-1">
             <PencilIcon />
           </button>
         </p>
@@ -811,7 +839,7 @@ export default function CreateBill() {
       {isRentMonthDialog && (
         <div className="fixed inset-0 backdrop-blur-lg flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 rounded-2xl p-6 w-full max-w-md border border-gray-600 shadow-2xl transform transition-all duration-500 scale-100 animate-slide-up hover:shadow-yellow-500/20">
-            <h3 className="text-lg font-semibold mb-4 text-white hover:text-yellow-300 transition-colors duration-300">Edit Rent Month and Year</h3>
+            <h3 className="text-lg font-semibold mb-4 text-white hover:text-yellow-300 transition-colors duration-300">Edit Rent Description</h3>
             
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-300 mb-2 hover:text-yellow-300 transition-colors duration-300">
@@ -853,14 +881,29 @@ export default function CreateBill() {
                 aria-label="Enter year"
               />
             </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2 hover:text-yellow-300 transition-colors duration-300">
+                Custom Description (Optional - for partial billing like &quot;for 15 days&quot;)
+              </label>
+              <input
+                type="text"
+                value={tempRentDescription}
+                onChange={(e) => setTempRentDescription(e.target.value)}
+                placeholder="e.g., Rent for the month of June '25 for 15 days"
+                className="w-full px-4 py-3 border border-gray-600 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-300 hover:shadow-lg focus:shadow-yellow-500/30 focus:scale-105"
+                aria-label="Enter custom rent description"
+              />
+              <p className="text-xs text-gray-400 mt-1">Leave empty to use default format: &quot;Rent for the month of [Month] &#39;[Year]&quot;</p>
+            </div>
             
             {/* Preview */}
-            {tempRentMonth && tempRentYear && (
-              <div className="mb-4 p-4 bg-gradient-to-r from-gray-700/50 to-gray-600/50 rounded-lg border border-gray-600 hover:border-yellow-500/50 transition-all duration-300 hover:bg-gradient-to-r hover:from-yellow-900/20 hover:to-gray-700/50">
-                <p className="text-sm text-gray-300 hover:text-yellow-300 transition-colors duration-300">Preview:</p>
-                <p className="font-medium text-white hover:text-yellow-200 transition-colors duration-300">Rent for the month of {tempRentMonth} &#39;{tempRentYear}</p>
-              </div>
-            )}
+            <div className="mb-4 p-4 bg-gradient-to-r from-gray-700/50 to-gray-600/50 rounded-lg border border-gray-600 hover:border-yellow-500/50 transition-all duration-300 hover:bg-gradient-to-r hover:from-yellow-900/20 hover:to-gray-700/50">
+              <p className="text-sm text-gray-300 hover:text-yellow-300 transition-colors duration-300">Edit Preview:</p>
+              <p className="font-medium text-white hover:text-yellow-200 transition-colors duration-300">
+                {tempRentDescription || (tempRentMonth && tempRentYear ? `Rent for the month of ${tempRentMonth} '${tempRentYear}` : 'Enter month and year above')}
+              </p>
+            </div>
             
             {/* Buttons */}
             <div className="flex justify-end space-x-3">
@@ -873,7 +916,7 @@ export default function CreateBill() {
               <button
                 onClick={handleRentMonthSave}
                 className="px-6 py-3 text-white bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg hover:from-yellow-500 hover:to-orange-500 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 hover:shadow-yellow-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                disabled={!tempRentMonth || !tempRentYear}
+                disabled={!tempRentDescription && (!tempRentMonth || !tempRentYear)}
               >
                 Save
               </button>
@@ -903,7 +946,10 @@ export default function CreateBill() {
           cgstRate,
           cgstAmount,
           grandTotal,
-          grandTotalInWords
+          grandTotalInWords,
+          rentMonth,
+          rentYear,
+          rentDescription
         }}
       />
     </main>
