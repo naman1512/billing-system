@@ -6,6 +6,7 @@ import Link from 'next/link';
 import PdfOverlay from '../components/PdfOverlay/PdfOverlay';
 import { generatePDF, InvoiceData } from '../utils/pdfGenerator-new';
 import { getTemplateById, getTemplateOptions, } from '../utils/companyTemplates';
+import { companiesAPI, invoicesAPI } from '../../lib/api';
 import toast from 'react-hot-toast';
 
 export default function CreateBill() {
@@ -90,7 +91,7 @@ export default function CreateBill() {
   
   // Invoice details states
   const [refNumber, setRefNumber] = useState('');
-  const [invoiceDate, setInvoiceDate] = useState(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }));
+  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]); // Store in YYYY-MM-DD format
   
   // Rent month/year states
   const [rentMonth, setRentMonth] = useState(new Date().toLocaleDateString('en-GB', { month: 'long' }));
@@ -109,8 +110,7 @@ export default function CreateBill() {
         setRentMonth(month);
         setRentYear(year);
       }
-    } catch (error) {
-      console.log('Date parsing error:', error);
+    } catch {
     }
   }, [invoiceDate]);
   
@@ -168,7 +168,7 @@ export default function CreateBill() {
         setAddressLine3(parsedData.addressLine3 || defaultTemplate.recipientDetails.addressLine3);
         setRecipientGst(parsedData.recipientGst || defaultTemplate.recipientDetails.gstNumber);
         setRefNumber(parsedData.refNumber || defaultTemplate.defaultRefNumberPrefix + '/10');
-        setInvoiceDate(parsedData.invoiceDate || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }));
+        setInvoiceDate(parsedData.invoiceDate || new Date().toISOString().split('T')[0]);
         setRentedArea(parsedData.rentedArea || defaultTemplate.billDetails.rentedArea);
         setRentRate(parsedData.rentRate || defaultTemplate.billDetails.rentRate);
         setRentAmount(parsedData.rentAmount || (parseInt(defaultTemplate.billDetails.rentedArea || '0') * parseInt(defaultTemplate.billDetails.rentRate || '0')).toString());
@@ -214,16 +214,10 @@ export default function CreateBill() {
     }
   }, []);
 
-  // Auto-calculate rent amount when area or rate changes (unless manually overridden)
+  // Auto-calculate rent amount when area or rate changes
   useEffect(() => {
     const calculatedRentAmount = (parseInt(rentedArea || '0') * parseInt(rentRate || '0')).toString();
-    // Only update if rentAmount is empty or matches the previous calculation
-    setRentAmount(prev => {
-      if (!prev || prev === '0' || prev === calculatedRentAmount) {
-        return calculatedRentAmount;
-      }
-      return prev; // Keep manual override
-    });
+    setRentAmount(calculatedRentAmount);
   }, [rentedArea, rentRate]);
 
   // Auto-calculate SGST and CGST amounts based on rent amount and rates
@@ -285,6 +279,137 @@ export default function CreateBill() {
   // Make the function available globally so navbar can access it
   if (typeof window !== 'undefined') {
     (window as typeof window & { handleConvertAndSend: () => Promise<void> }).handleConvertAndSend = handleConvertAndSend;
+  }
+
+  // Save to Directory function
+  const handleSaveToDirectory = async () => {
+    try {
+      // Check if user is authenticated with simple localStorage check
+      const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+      if (!isAuthenticated) {
+        toast.error('Please log in first to save invoices', {
+          icon: '🔒',
+          duration: 4000,
+        });
+        return;
+      }
+
+      // Validate required fields
+      if (!recipientName || !rentedArea || !rentRate || !refNumber) {
+        toast.error('Please fill in all required fields before saving', {
+          icon: '⚠️',
+          duration: 4000,
+        });
+        return;
+      }
+
+      toast.loading('Saving invoice to directory...', { id: 'saving' });
+
+      // First, get all companies to check if one already exists
+      const companiesResponse = await companiesAPI.getAll();
+      let company = companiesResponse.companies.find((c: { name: string }) => c.name === recipientName);
+
+      // If company doesn't exist, create it
+      if (!company) {
+        const template = getTemplateById(selectedCompanyId);
+        if (!template) {
+          toast.error('Please select a valid company template', {
+            icon: '⚠️',
+            duration: 4000,
+          });
+          return;
+        }
+
+        // Create company data
+        const companyData = {
+          name: recipientName,
+          addressLine1: addressLine1,
+          addressLine2: addressLine2,
+          addressLine3: addressLine3,
+          gstNumbers: [recipientGst],
+          rentedArea: parseInt(rentedArea),
+          rentRate: parseFloat(rentRate),
+          sgstRate: parseFloat(sgstRate) || 9,
+          cgstRate: parseFloat(cgstRate) || 9,
+          refNumberPrefix: template.defaultRefNumberPrefix
+        };
+
+        const response = await companiesAPI.create(companyData);
+        company = response.company;
+      }
+
+      // Generate PDF
+      const invoiceData: InvoiceData = {
+        recipientName,
+        addressLine1,
+        addressLine2,
+        addressLine3,
+        recipientGst,
+        refNumber,
+        invoiceDate,
+        rentedArea,
+        rentRate,
+        rentAmount,
+        sgstRate,
+        sgstAmount,
+        cgstRate,
+        cgstAmount,
+        grandTotal,
+        grandTotalInWords,
+        rentMonth,
+        rentYear,
+        rentDescription
+      };
+
+      const pdfUrl = await generatePDF(invoiceData);
+      
+      // Convert PDF URL to File object for upload
+      const pdfResponse = await fetch(pdfUrl);
+      const pdfBlob = await pdfResponse.blob();
+      const pdfFile = new File([pdfBlob], `invoice-${refNumber}.pdf`, { type: 'application/pdf' });
+
+      // Create invoice in database
+      const invoicePayload = {
+        companyId: company.id,
+        refNumber: refNumber,
+        amount: parseFloat(grandTotal),
+        invoiceDate: invoiceDate, // Add the invoice date
+        rentDescription: rentDescription || (rentMonth && rentYear ? `Rent for the month of ${rentMonth} '${rentYear}` : undefined),
+        emailRecipient: '', // Can be filled later when sending email
+        status: 'DRAFT' // Mark as draft since it's just saved, not sent
+      };
+
+      await invoicesAPI.create(invoicePayload, pdfFile);
+
+      toast.success('Invoice saved to directory successfully!', {
+        id: 'saving',
+        icon: '💾',
+        duration: 4000,
+      });
+
+      // Show the PDF overlay to confirm the saved invoice
+      setPdfUrl(pdfUrl);
+      setIsPdfOverlayOpen(true);
+
+      // Log success for debugging
+
+    } catch (error: unknown) {
+      console.error('Error saving to directory:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save invoice to directory';
+      toast.error(errorMessage, {
+        id: 'saving',
+        icon: '❌',
+        duration: 4000,
+      });
+    }
+  };
+
+  // Make the save function available globally so navbar can access it
+  if (typeof window !== 'undefined') {
+    (window as typeof window & { 
+      handleConvertAndSend: () => Promise<void>;
+      handleSaveToDirectory: () => Promise<void>;
+    }).handleSaveToDirectory = handleSaveToDirectory;
   }
 
   const openDialog = (field: string, currentValue: string, title: string) => {
@@ -410,7 +535,7 @@ export default function CreateBill() {
   };
 
   const handleDateSave = () => {
-    setInvoiceDate(formatDate(selectedDate));
+    setInvoiceDate(selectedDate); // Store ISO format date
     setIsDateDialog(false);
   };
 

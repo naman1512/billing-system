@@ -92,12 +92,9 @@ export default function EditInvoice() {
       const savedData = localStorage.getItem('savedInvoiceData');
       const selectedCompanyId = localStorage.getItem('selectedCompanyId') || 'company1';
       
-      console.log('Live Editor - Selected Company ID:', selectedCompanyId);
-      console.log('Live Editor - Has saved data:', !!savedData);
       
       if (savedData) {
         const parsedData = JSON.parse(savedData);
-        console.log('Live Editor - Loading saved data:', parsedData.recipientName);
         
         // Migration: Update old hardcoded dates to current dates if they match the old values
         if (parsedData.invoiceDate && parsedData.invoiceDate.includes('May 2025')) {
@@ -117,7 +114,6 @@ export default function EditInvoice() {
       } else {
         // No saved data, check what company is selected in main page or default to company1
         const defaultTemplate = getTemplateById(selectedCompanyId)!;
-        console.log('Live Editor - Using template:', defaultTemplate.recipientDetails.name);
         
         // Use template values with proper calculations
         const rentAmount = (parseInt(defaultTemplate.billDetails.rentedArea) * parseInt(defaultTemplate.billDetails.rentRate)).toString();
