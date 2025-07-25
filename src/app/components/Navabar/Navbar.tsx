@@ -22,6 +22,56 @@ export default function Navbar() {
     }
   };
 
+  const handleSaveToDirectory = (e?: React.MouseEvent) => {
+    // Prevent any default behavior
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    // Call the global function from the page component
+    if (typeof window !== 'undefined') {
+      const windowWithHandler = window as typeof window & { handleSaveToDirectory?: () => Promise<void> };
+      if (windowWithHandler.handleSaveToDirectory) {
+        windowWithHandler.handleSaveToDirectory();
+      }
+    }
+  };
+
+  const handleCompanyDashboard = async () => {
+    try {
+      if (typeof window !== 'undefined') {
+        const selectedCompanyId = localStorage.getItem('selectedCompanyId') || 'company1';
+        
+        // Import and get the template to find the company name
+        const { getTemplateById } = await import('../../utils/companyTemplates');
+        const template = getTemplateById(selectedCompanyId);
+        
+        if (template) {
+          // Fetch companies to find the real company ID by name
+          const { companiesAPI } = await import('../../../lib/api');
+          const companiesResponse = await companiesAPI.getAll();
+          const company = companiesResponse.companies?.find((c: { name: string }) => 
+            c.name.toLowerCase() === template.recipientDetails.name.toLowerCase()
+          );
+          
+          if (company) {
+            window.location.href = `/company/${company.id}`;
+          } else {
+            // If company doesn't exist in database, go to main dashboard
+            window.location.href = '/dashboard';
+          }
+        } else {
+          window.location.href = '/dashboard';
+        }
+      }
+    } catch (error) {
+      console.error('Error navigating to company dashboard:', error);
+      // Fallback to main dashboard
+      window.location.href = '/dashboard';
+    }
+  };
+
   const isCurrentPage = (path: string) => pathname === path;
 
   return (
@@ -70,12 +120,43 @@ export default function Navbar() {
                 Live Editor
               </Link>
               {pathname === '/create-bill' && (
-                <button 
-                  onClick={handleConvertAndSend}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 whitespace-nowrap transform hover:scale-105 shadow-lg hover:shadow-xl"
-                >
-                  Convert & Send
-                </button>
+                <div className="flex items-center space-x-2">
+                  {/* Dashboard Navigation Buttons */}
+                  <Link 
+                    href="/dashboard"
+                    className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 whitespace-nowrap transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Dashboard
+                  </Link>
+                  
+                  <button 
+                    onClick={handleCompanyDashboard}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 whitespace-nowrap transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m0 0h2M7 7h10M7 10h10M7 13h10m-9 3h8" />
+                    </svg>
+                    Company
+                  </button>
+                  
+                  <button 
+                    type="button"
+                    onClick={handleSaveToDirectory}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 whitespace-nowrap transform hover:scale-105 shadow-lg hover:shadow-xl"
+                  >
+                    Save to Directory
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={handleConvertAndSend}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 whitespace-nowrap transform hover:scale-105 shadow-lg hover:shadow-xl"
+                  >
+                    Convert & Send
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -149,12 +230,43 @@ export default function Navbar() {
             Live Editor
           </Link>
           {pathname === '/create-bill' && (
-            <button 
-              onClick={handleConvertAndSend}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 w-full text-left transform hover:scale-105"
-            >
-              Convert & Send
-            </button>
+            <div className="space-y-2">
+              {/* Dashboard Navigation Buttons - Mobile */}
+              <Link 
+                href="/dashboard"
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 w-full text-left transform hover:scale-105 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Dashboard
+              </Link>
+              
+              <button 
+                onClick={handleCompanyDashboard}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 w-full text-left transform hover:scale-105 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m0 0h2M7 7h10M7 10h10M7 13h10m-9 3h8" />
+                </svg>
+                Company Dashboard
+              </button>
+              
+              <button 
+                type="button"
+                onClick={handleSaveToDirectory}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 w-full text-left transform hover:scale-105"
+              >
+                Save to Directory
+              </button>
+              <button 
+                type="button"
+                onClick={handleConvertAndSend}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 w-full text-left transform hover:scale-105"
+              >
+                Convert & Send
+              </button>
+            </div>
           )}
         </div>
       </div>

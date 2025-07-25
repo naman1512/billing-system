@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { companiesAPI, invoicesAPI } from '../../../lib/api';
 
 interface InvoiceData {
   recipientName: string;
@@ -30,9 +31,10 @@ interface PdfOverlayProps {
   onClose: () => void;
   pdfUrl: string;
   invoiceData?: InvoiceData; // Add invoice data prop
+  existingInvoiceId?: string; // Optional invoice ID to update instead of create
 }
 
-export default function PdfOverlay({ isOpen, onClose, pdfUrl, invoiceData }: PdfOverlayProps) {
+export default function PdfOverlay({ isOpen, onClose, pdfUrl, invoiceData, existingInvoiceId }: PdfOverlayProps) {
   const [recipientEmail, setRecipientEmail] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -87,6 +89,73 @@ Email: xxxxxx@gmail.com`
           icon: '✅',
           duration: 4000,
         });
+
+        // Save invoice to database after successful email send
+        try {
+          // First, check if company exists or create it
+          const companiesData = await companiesAPI.getAll();
+          const existingCompany = companiesData.companies?.find((company: { name: string; id: string }) => 
+            company.name.toLowerCase() === invoiceData.recipientName.toLowerCase()
+          );
+
+          let companyId;
+          if (existingCompany) {
+            companyId = existingCompany.id;
+          } else {
+            // Create new company
+            const newCompanyData = await companiesAPI.create({
+              name: invoiceData.recipientName,
+              addressLine1: invoiceData.addressLine1,
+              addressLine2: invoiceData.addressLine2,
+              addressLine3: invoiceData.addressLine3,
+              gstNumbers: [invoiceData.recipientGst],
+              rentedArea: parseInt(invoiceData.rentedArea || '0'),
+              rentRate: parseInt(invoiceData.rentRate || '0'),
+              sgstRate: parseInt(invoiceData.sgstRate || '0'),
+              cgstRate: parseInt(invoiceData.cgstRate || '0'),
+            });
+            companyId = newCompanyData.company.id;
+          }
+
+          // Update existing invoice or create new one
+          if (existingInvoiceId) {
+            // Update existing DRAFT invoice to SENT
+            await invoicesAPI.update(existingInvoiceId, {
+              status: 'SENT',
+              emailRecipient: recipientEmail
+            });
+            toast.success('Invoice status updated to sent!', {
+              icon: '✅',
+              duration: 3000,
+            });
+          } else {
+            // Create new invoice record
+            const invoiceResult = await invoicesAPI.create({
+              companyId,
+              refNumber: invoiceData.refNumber,
+              amount: parseFloat(invoiceData.grandTotal),
+              rentDescription: invoiceData.rentDescription || `Rent for the month of ${invoiceData.rentMonth} '${invoiceData.rentYear}`,
+              dueDate: invoiceData.invoiceDate, // Same as invoice date for rent bills
+              emailRecipient: recipientEmail,
+              status: 'SENT' // Mark as sent since we just emailed it
+            });
+
+            if (invoiceResult) {
+              toast.success('Invoice saved to directory!', {
+                icon: '💾',
+                duration: 3000,
+              });
+            } else {
+              throw new Error('Failed to create invoice');
+            }
+          }
+        } catch (error) {
+          console.error('Error saving invoice to database:', error);
+          toast.error('Email sent but failed to save to directory', {
+            icon: '⚠️',
+            duration: 4000,
+          });
+        }
         
         // Automatically download PDF copy after successful email send
         if (invoiceData) {
