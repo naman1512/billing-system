@@ -307,7 +307,8 @@ export default function CreateBill() {
 
       // First, get all companies to check if one already exists
       const companiesResponse = await companiesAPI.getAll();
-      let company = companiesResponse.companies.find((c: { name: string }) => c.name === recipientName);
+      const companiesList = (companiesResponse as { companies: { name: string; id: string }[] }).companies;
+      let company = companiesList.find((c) => c.name === recipientName);
 
       // If company doesn't exist, create it
       if (!company) {
@@ -335,7 +336,7 @@ export default function CreateBill() {
         };
 
         const response = await companiesAPI.create(companyData);
-        company = response.company;
+        company = (response as { company: { id: string; name: string } }).company;
       }
 
       // Generate PDF

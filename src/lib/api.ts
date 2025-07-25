@@ -13,7 +13,7 @@ const getAuthToken = (): string | null => {
 const apiRequest = async (
   endpoint: string, 
   options: RequestInit = {}
-): Promise<any> => {
+): Promise<unknown> => {
   const token = getAuthToken();
   
   const config: RequestInit = {
@@ -35,7 +35,7 @@ const apiRequest = async (
       let errorData;
       try {
         errorData = await response.json();
-      } catch (jsonErr) {
+      } catch {
         errorData = { error: { message: response.statusText || 'Request failed' } };
       }
       console.error('API Error:', errorData);
@@ -56,7 +56,7 @@ const apiRequest = async (
 const apiUpload = async (
   endpoint: string,
   formData: FormData
-): Promise<any> => {
+): Promise<unknown> => {
   const token = getAuthToken();
   
   const config: RequestInit = {
@@ -122,7 +122,7 @@ export const companiesAPI = {
       body: JSON.stringify(companyData),
     }),
 
-  update: (id: string, companyData: any) =>
+  update: (id: string, companyData: Record<string, unknown>) =>
     apiRequest(`/companies/${id}`, {
       method: 'PUT',
       body: JSON.stringify(companyData),
@@ -182,7 +182,7 @@ export const invoicesAPI = {
     }
   },
 
-  update: (id: string, invoiceData: any) =>
+  update: (id: string, invoiceData: Record<string, unknown>) =>
     apiRequest(`/invoices?id=${id}`, {
       method: 'PUT',
       body: JSON.stringify(invoiceData),
