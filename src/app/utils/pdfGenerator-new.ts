@@ -32,20 +32,13 @@ const getJsPDF = async () => {
 const getSignatureBase64 = async (): Promise<string | null> => {
   try {
     // Only run on server-side
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined') { // Check if running on client-side
       return null;
     }
     
     // For server-side, we need to read the file from the public directory
-    const fs = await import('fs');
-    const path = await import('path');
-    
-    const signaturePath = path.join(process.cwd(), 'public', 'sign.png');
-    
-    if (fs.existsSync(signaturePath)) {
-      const imageBuffer = fs.readFileSync(signaturePath);
-      return `data:image/png;base64,${imageBuffer.toString('base64')}`;
-    }
+    // Removed Node.js fs usage for frontend compatibility
+    return null; // Return null since we cannot access the file system in the frontend
     return null;
   } catch (error) {
     console.warn('Could not load signature image:', error);
