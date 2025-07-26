@@ -1,3 +1,24 @@
+// Load signature image as base64 for server-side PDF generation
+const getSignatureBase64 = async (): Promise<string | null> => {
+  try {
+    // Only run on server-side
+    if (typeof window !== 'undefined') {
+      return null;
+    }
+    // For server-side, we need to read the file from the public directory
+    const fs = await import('fs');
+    const path = await import('path');
+    const signaturePath = path.join(process.cwd(), 'public', 'sign.png');
+    if (fs.existsSync(signaturePath)) {
+      const imageBuffer = fs.readFileSync(signaturePath);
+      return `data:image/png;base64,${imageBuffer.toString('base64')}`;
+    }
+    return null;
+  } catch (error) {
+    console.warn('Could not load signature image:', error);
+    return null;
+  }
+};
 // Helper to generate invoice HTML for emails with embedded signature
 export const generateInvoiceHTMLEmail = async (invoiceData: InvoiceData): Promise<string> => {
   const signatureDataUrl = await getSignatureBase64ForHTML();
@@ -34,30 +55,6 @@ const getJsPDF = async () => {
   return { jsPDF, html2canvas };
 };
 
-// Try to read sign.png as PNG, then sign.jpg as JPEG, and return base64 data URL and format
-const getSignatureBase64AndFormat = async (): Promise<{ dataUrl: string, format: 'PNG' | 'JPEG' } | null> => {
-  try {
-    if (typeof window !== 'undefined') return null;
-    const path = await import('path');
-    const fs = await import('fs/promises');
-    // Try PNG first
-    try {
-      const pngPath = path.resolve(process.cwd(), 'public', 'sign.png');
-      const pngBuffer = await fs.readFile(pngPath);
-      return { dataUrl: `data:image/png;base64,${pngBuffer.toString('base64')}`, format: 'PNG' };
-    } catch {}
-    // Try JPEG fallback
-    try {
-      const jpgPath = path.resolve(process.cwd(), 'public', 'sign.jpg');
-      const jpgBuffer = await fs.readFile(jpgPath);
-      return { dataUrl: `data:image/jpeg;base64,${jpgBuffer.toString('base64')}`, format: 'JPEG' };
-    } catch {}
-    return null;
-  } catch (error) {
-    console.warn('Could not load signature image:', error);
-    return null;
-  }
-};
 // Utility to format date as "21st July 2025"
 export function formatInvoiceDate(dateString: string): string {
   const date = new Date(dateString);
@@ -325,9 +322,10 @@ export const generatePDFBuffer = async (invoiceData: InvoiceData): Promise<Buffe
     
     // Try to add the actual signature image below the line
     try {
-      const sig = await getSignatureBase64AndFormat();
-      if (sig) {
-        pdf.addImage(sig.dataUrl, sig.format, signatureX + 5, signatureY + 12, 40, 15);
+      const signatureBase64 = await getSignatureBase64();
+      if (signatureBase64) {
+        // Add the actual signature image below the line
+        pdf.addImage(signatureBase64, 'PNG', signatureX + 5, signatureY + 12, 40, 15);
       } else {
         throw new Error('Signature image not found');
       }
