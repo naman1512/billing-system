@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import PdfOverlay from '../components/PdfOverlay/PdfOverlay';
-import { generatePDF, InvoiceData } from '../utils/pdfGenerator-new';
+import { generatePDF, InvoiceData, formatInvoiceDate } from '../utils/pdfGenerator-new';
 import { getTemplateById, getTemplateOptions, } from '../utils/companyTemplates';
 import { companiesAPI, invoicesAPI } from '../../lib/api';
 import toast from 'react-hot-toast';
@@ -665,7 +665,7 @@ export default function CreateBill() {
               <PencilIcon />
             </button>
             <span className="mx-2"></span>
-            Date: {invoiceDate}
+            Date: {formatInvoiceDate(invoiceDate)}
             <button onClick={() => openDateDialog()} aria-label="Edit date" className="hover:bg-blue-500/20 p-1 rounded-full transition-all duration-300">
               <PencilIcon />
             </button>
