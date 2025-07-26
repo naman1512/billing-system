@@ -39,15 +39,21 @@ export default function PdfOverlay({ isOpen, onClose, pdfUrl, invoiceData, exist
   const [isSending, setIsSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailMessage, setEmailMessage] = useState(
-    `Dear recipient,
+`Dear Client,
 
-Here is your bill for the month.
+I hope this message finds you well.
+Please find attached the billing statement for the current month. We kindly request you to review the details and let us know if there are any discrepancies or questions.
 
-Thank you,
-Regards
+Your continued partnership is sincerely appreciated, and we remain committed to providing you with efficient and reliable service. Timely payment will help us ensure uninterrupted operations and support.
+
+Should you need any clarification regarding the bill or have any specific requirements, please do not hesitate to get in touch.
+
+Thank you for your attention and cooperation.
+
+Warm regards,
 Harsh Vardhan Bhandari
-Number: xxxxxxxxx
-Email: xxxxxx@gmail.com`
+📞 +91 98212 94827
+📧 sahayawarehousingcompany@gmail.com`
   );
 
   const handleSendEmail = async () => {

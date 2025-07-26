@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #dc2626;">Sahaya Warehousing Company</h2>
-          <p>Dear ${invoiceData.recipientName},</p>
+          <h4 style = "color: #000000; font-weight: 600;">${invoiceData.recipientName},</h4>
           <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
             ${emailMessage.replace(/\n/g, '<br>')}
           </div>
