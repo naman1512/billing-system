@@ -32,19 +32,44 @@ const getJsPDF = async () => {
 const getSignatureBase64 = async (): Promise<string | null> => {
   try {
     // Only run on server-side
-    if (typeof window !== 'undefined') { // Check if running on client-side
+    if (typeof window !== 'undefined') {
       return null;
     }
-    
-    // For server-side, we need to read the file from the public directory
-    // Removed Node.js fs usage for frontend compatibility
-    return null; // Return null since we cannot access the file system in the frontend
-    return null;
+    // Use dynamic import to avoid SSR issues
+    const path = await import('path');
+    const fs = await import('fs/promises');
+    // Adjust the path to your actual signature image location (relative to backend root)
+    const signaturePath = path.resolve(process.cwd(), 'public', 'sign.png');
+    try {
+      const imageBuffer = await fs.readFile(signaturePath);
+      return `data:image/png;base64,${imageBuffer.toString('base64')}`;
+    } catch {
+      console.warn('Signature image not found at', signaturePath);
+      return null;
+    }
   } catch (error) {
     console.warn('Could not load signature image:', error);
     return null;
   }
 };
+// Utility to format date as "21st July 2025"
+export function formatInvoiceDate(dateString: string): string {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString;
+  const day = date.getDate();
+  const month = date.toLocaleString('default', { month: 'long' });
+  const year = date.getFullYear();
+  const getOrdinal = (n: number) => {
+    if (n > 3 && n < 21) return 'th';
+    switch (n % 10) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
+    }
+  };
+  return `${day}${getOrdinal(day)} ${month} ${year}`;
+}
 
 // Generate PDF buffer for email attachment
 export const generatePDFBuffer = async (invoiceData: InvoiceData): Promise<Buffer> => {
@@ -146,7 +171,7 @@ export const generatePDFBuffer = async (invoiceData: InvoiceData): Promise<Buffe
     pdf.text(`Ref No: ${invoiceData.refNumber}`, rightColX, rightColY);
     
     rightColY += 5;
-    pdf.text(`Date: ${invoiceData.invoiceDate}`, rightColX, rightColY);
+    pdf.text(`Date: ${formatInvoiceDate(invoiceData.invoiceDate)}`, rightColX, rightColY);
     
     currentY += 20;
     
@@ -586,7 +611,7 @@ export const generateInvoiceHTML = (invoiceData: InvoiceData): string => {
                 <p>PAN No.: AEZFS6432B</p>
                 <p>HSN Code: 997212</p>
                 <p><strong>Ref No: ${invoiceData.refNumber}</strong></p>
-                <p><strong>Date: ${invoiceData.invoiceDate}</strong></p>
+                <p><strong>Date: ${formatInvoiceDate(invoiceData.invoiceDate)}</strong></p>
               </div>
             </div>
             
