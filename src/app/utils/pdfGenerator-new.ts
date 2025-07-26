@@ -1,3 +1,9 @@
+// Helper to generate invoice HTML for emails with embedded signature
+export const generateInvoiceHTMLEmail = async (invoiceData: InvoiceData): Promise<string> => {
+  const signatureDataUrl = await getSignatureBase64ForHTML();
+  return generateInvoiceHTML(invoiceData, signatureDataUrl);
+};
+
 // Interface for invoice data
 export interface InvoiceData {
   recipientName: string;
