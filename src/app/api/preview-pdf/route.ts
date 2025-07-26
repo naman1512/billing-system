@@ -22,7 +22,10 @@ export async function GET() {
       cgstRate: defaultTemplate.billDetails.cgstRate,
       cgstAmount: ((parseInt(defaultTemplate.billDetails.rentedArea) * parseInt(defaultTemplate.billDetails.rentRate)) * parseInt(defaultTemplate.billDetails.cgstRate) / 100).toString(),
       grandTotal: ((parseInt(defaultTemplate.billDetails.rentedArea) * parseInt(defaultTemplate.billDetails.rentRate)) * (1 + (parseInt(defaultTemplate.billDetails.sgstRate) + parseInt(defaultTemplate.billDetails.cgstRate)) / 100)).toString(),
-      grandTotalInWords: 'Amount calculation based on template values'
+      grandTotalInWords: 'Amount calculation based on template values',
+      rentMonth: 'May',
+      rentYear: '25',
+      rentDescription: "Rent for the month of May '25"
     };
 
     // Generate the HTML content with current CSS

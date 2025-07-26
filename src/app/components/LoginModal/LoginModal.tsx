@@ -27,12 +27,14 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     try {
       if (isLogin) {
         const response = await authAPI.login({ email, password });
-        login(response.token);
+        const data = response as { token: string };
+        login(data.token);
         toast.success('Logged in successfully!', { icon: '🎉' });
         onClose();
       } else {
         const response = await authAPI.register({ email, password, name });
-        login(response.token);
+        const data = response as { token: string };
+        login(data.token);
         toast.success('Account created successfully!', { icon: '🎉' });
         onClose();
       }

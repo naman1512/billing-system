@@ -93,8 +93,8 @@ Email: xxxxxx@gmail.com`
         // Save invoice to database after successful email send
         try {
           // First, check if company exists or create it
-          const companiesData = await companiesAPI.getAll();
-          const existingCompany = companiesData.companies?.find((company: { name: string; id: string }) => 
+          const companiesData = await companiesAPI.getAll() as { companies: { name: string; id: string }[] };
+          const existingCompany = companiesData.companies?.find((company) => 
             company.name.toLowerCase() === invoiceData.recipientName.toLowerCase()
           );
 
@@ -113,7 +113,7 @@ Email: xxxxxx@gmail.com`
               rentRate: parseInt(invoiceData.rentRate || '0'),
               sgstRate: parseInt(invoiceData.sgstRate || '0'),
               cgstRate: parseInt(invoiceData.cgstRate || '0'),
-            });
+            }) as { company: { id: string } };
             companyId = newCompanyData.company.id;
           }
 

@@ -307,7 +307,8 @@ export default function CreateBill() {
 
       // First, get all companies to check if one already exists
       const companiesResponse = await companiesAPI.getAll();
-      const companiesList = (companiesResponse as { companies: { name: string; id: string }[] }).companies;
+      const companiesData = companiesResponse as { companies: { name: string; id: string }[] };
+      const companiesList = companiesData.companies;
       let company = companiesList.find((c) => c.name === recipientName);
 
       // If company doesn't exist, create it

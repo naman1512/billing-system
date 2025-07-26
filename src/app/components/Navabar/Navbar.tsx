@@ -50,8 +50,8 @@ export default function Navbar() {
         if (template) {
           // Fetch companies to find the real company ID by name
           const { companiesAPI } = await import('../../../lib/api');
-          const companiesResponse = await companiesAPI.getAll();
-          const company = companiesResponse.companies?.find((c: { name: string }) => 
+          const companiesResponse = await companiesAPI.getAll() as { companies: { id: string; name: string }[] };
+          const company = companiesResponse.companies?.find((c) => 
             c.name.toLowerCase() === template.recipientDetails.name.toLowerCase()
           );
           
