@@ -55,8 +55,10 @@ export default function Dashboard() {
         invoicesAPI.getAll()
       ]);
 
-      setCompanies(companiesResponse.companies || []);
-      setInvoices(invoicesResponse.invoices || []);
+      const typedCompaniesResponse = companiesResponse as { companies: Company[] };
+      const typedInvoicesResponse = invoicesResponse as { invoices: Invoice[] };
+      setCompanies(typedCompaniesResponse.companies || []);
+      setInvoices(typedInvoicesResponse.invoices || []);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data');

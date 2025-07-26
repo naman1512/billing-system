@@ -55,12 +55,12 @@ export default function CompanyInvoicesPage() {
           companiesAPI.getInvoices(companyId)
         ]);
 
-        
-        // Debug: Log individual invoice dates
-        // ...existing code...
+        // Cast responses to expected types
+        const companyData = companyResponse as { company: Company };
+        const invoicesData = invoicesResponse as { invoices: Invoice[] };
 
-        setCompany(companyResponse.company);
-        setInvoices(invoicesResponse.invoices || []);
+        setCompany(companyData.company);
+        setInvoices(invoicesData.invoices || []);
       } catch (err) {
         console.error('Error fetching company data:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch company data');
@@ -186,7 +186,8 @@ export default function CompanyInvoicesPage() {
           alert('Invoice sent successfully!');
           // Refresh invoices
           const invoicesResponse = await companiesAPI.getInvoices(companyId);
-          setInvoices(invoicesResponse.invoices || []);
+          const invoicesData = invoicesResponse as { invoices: Invoice[] };
+          setInvoices(invoicesData.invoices || []);
         }
       } else {
         alert('Failed to send invoice.');
