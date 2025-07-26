@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { companiesAPI, invoicesAPI } from '../../lib/api';
+import { invoicesAPI } from '../../lib/api';
 import { generatePDF, InvoiceData } from '../utils/pdfGenerator-new';
 import PdfOverlay from '../components/PdfOverlay/PdfOverlay';
+import { companyTemplates } from '../utils/companyTemplates';
 
 interface Company {
   id: string;
@@ -43,29 +44,40 @@ export default function Dashboard() {
   const [currentInvoiceData, setCurrentInvoiceData] = useState<InvoiceData | null>(null);
   const [currentInvoiceId, setCurrentInvoiceId] = useState<string | null>(null);
 
+
   useEffect(() => {
-    fetchDashboardData();
+    setLoading(true);
+    // Always use companyTemplates for companies
+    setCompanies(companyTemplates.map(t => ({
+      id: t.id,
+      name: t.recipientDetails.name,
+      addressLine1: t.recipientDetails.addressLine1,
+      addressLine2: t.recipientDetails.addressLine2,
+      addressLine3: t.recipientDetails.addressLine3,
+      gstNumbers: t.recipientDetails.gstNumber,
+      rentedArea: parseInt(t.billDetails.rentedArea),
+      rentRate: parseFloat(t.billDetails.rentRate),
+      sgstRate: parseFloat(t.billDetails.sgstRate),
+      cgstRate: parseFloat(t.billDetails.cgstRate),
+      refNumberPrefix: t.defaultRefNumberPrefix,
+      createdAt: '',
+      updatedAt: ''
+    })));
+    // Only fetch invoices from backend
+    const fetchInvoices = async () => {
+      try {
+        const invoicesResponse = await invoicesAPI.getAll();
+        const typedInvoicesResponse = invoicesResponse as { invoices: Invoice[] };
+        setInvoices(typedInvoicesResponse.invoices || []);
+      } catch {
+        setInvoices([]);
+        setError('Backend not available. Invoice data not loaded.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInvoices();
   }, []);
-
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      const [companiesResponse, invoicesResponse] = await Promise.all([
-        companiesAPI.getAll(),
-        invoicesAPI.getAll()
-      ]);
-
-      const typedCompaniesResponse = companiesResponse as { companies: Company[] };
-      const typedInvoicesResponse = invoicesResponse as { invoices: Invoice[] };
-      setCompanies(typedCompaniesResponse.companies || []);
-      setInvoices(typedInvoicesResponse.invoices || []);
-    } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
 
   // Helper: extract true company base name (robust for your templates)
@@ -191,16 +203,20 @@ export default function Dashboard() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center">
-        <div className="text-red-400 text-xl">Error: {error}</div>
-      </div>
-    );
-  }
+  // If error, show dashboard with template data and a warning
+  // (companies will be set to template data in this case)
+  // Only show a warning banner, not a blocking error page
+
+  // Show warning banner if error
+  const WarningBanner = error ? (
+    <div className="bg-yellow-200 text-yellow-900 px-4 py-2 rounded mb-4 text-center font-semibold">
+      {error}
+    </div>
+  ) : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4">
+      {WarningBanner}
       {/* Back to Home Button */}
       <div className="mb-8 sm:absolute sm:top-8 sm:left-8 sm:mb-0">
         <Link href="/">
@@ -238,7 +254,7 @@ export default function Dashboard() {
             
             <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-xl border border-gray-700 hover:border-purple-500 transition-all duration-300">
               <h3 className="text-xl font-semibold text-purple-400 mb-2">Companies</h3>
-              <p className="text-3xl font-bold text-white">{companies.length}</p>
+              <p className="text-3xl font-bold text-white">{Object.keys(companyGroups).length}</p>
               <p className="text-gray-400 text-sm mt-2">Total registered</p>
             </div>
           </div>
@@ -445,8 +461,7 @@ export default function Dashboard() {
             setPdfUrl('');
             setCurrentInvoiceData(null);
             setCurrentInvoiceId(null);
-            // Refresh dashboard data to show updated status
-            fetchDashboardData();
+            // Optionally, you can refresh invoices here if needed
           }}
           pdfUrl={pdfUrl}
           invoiceData={currentInvoiceData}
