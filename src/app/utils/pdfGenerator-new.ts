@@ -28,15 +28,23 @@ const getJsPDF = async () => {
   return { jsPDF, html2canvas };
 };
 
-// Always use a public URL for the signature image so it works in production
+// Read the public/sign.png image from disk and return a base64 data URL for jsPDF
 const getSignatureBase64 = async (): Promise<string | null> => {
-  // Use the public URL for the signature image
-  // Try to use NEXT_PUBLIC_BASE_URL if available, else fallback to relative path
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
-  // If baseUrl is set, ensure it does not end with a slash
-  const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-  // Use absolute URL if baseUrl is set, else relative
-  return `${normalizedBaseUrl}/sign.png`;
+  try {
+    // Only run on server-side
+    if (typeof window !== 'undefined') {
+      return null;
+    }
+    const path = await import('path');
+    const fs = await import('fs/promises');
+    // Path to sign.png in the public directory
+    const signaturePath = path.resolve(process.cwd(), 'public', 'sign.png');
+    const imageBuffer = await fs.readFile(signaturePath);
+    return `data:image/png;base64,${imageBuffer.toString('base64')}`;
+  } catch (error) {
+    console.warn('Could not load signature image:', error);
+    return null;
+  }
 };
 // Utility to format date as "21st July 2025"
 export function formatInvoiceDate(dateString: string): string {
