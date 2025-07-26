@@ -28,29 +28,15 @@ const getJsPDF = async () => {
   return { jsPDF, html2canvas };
 };
 
-// Load signature image as base64 for server-side PDF generation
+// Always use a public URL for the signature image so it works in production
 const getSignatureBase64 = async (): Promise<string | null> => {
-  try {
-    // Only run on server-side
-    if (typeof window !== 'undefined') {
-      return null;
-    }
-    // Use dynamic import to avoid SSR issues
-    const path = await import('path');
-    const fs = await import('fs/promises');
-    // Adjust the path to your actual signature image location (relative to backend root)
-    const signaturePath = path.resolve(process.cwd(), 'public', 'sign.png');
-    try {
-      const imageBuffer = await fs.readFile(signaturePath);
-      return `data:image/png;base64,${imageBuffer.toString('base64')}`;
-    } catch {
-      console.warn('Signature image not found at', signaturePath);
-      return null;
-    }
-  } catch (error) {
-    console.warn('Could not load signature image:', error);
-    return null;
-  }
+  // Use the public URL for the signature image
+  // Try to use NEXT_PUBLIC_BASE_URL if available, else fallback to relative path
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+  // If baseUrl is set, ensure it does not end with a slash
+  const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  // Use absolute URL if baseUrl is set, else relative
+  return `${normalizedBaseUrl}/sign.png`;
 };
 // Utility to format date as "21st July 2025"
 export function formatInvoiceDate(dateString: string): string {
