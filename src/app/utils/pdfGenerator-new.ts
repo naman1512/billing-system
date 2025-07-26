@@ -348,7 +348,35 @@ export const generatePDFBuffer = async (invoiceData: InvoiceData): Promise<Buffe
 };
 
 // Generate HTML content for invoice
-export const generateInvoiceHTML = (invoiceData: InvoiceData): string => {
+// Helper to get base64 signature for server-side HTML embedding
+export const getSignatureBase64ForHTML = async (): Promise<string | null> => {
+  try {
+    if (typeof window !== 'undefined') return null;
+    const path = await import('path');
+    const fs = await import('fs/promises');
+    // Try PNG first
+    try {
+      const pngPath = path.resolve(process.cwd(), 'public', 'sign.png');
+      const pngBuffer = await fs.readFile(pngPath);
+      return `data:image/png;base64,${pngBuffer.toString('base64')}`;
+    } catch {}
+    // Try JPEG fallback
+    try {
+      const jpgPath = path.resolve(process.cwd(), 'public', 'sign.jpg');
+      const jpgBuffer = await fs.readFile(jpgPath);
+      return `data:image/jpeg;base64,${jpgBuffer.toString('base64')}`;
+    } catch {}
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+// Generate HTML content for invoice, optionally embedding signature as base64
+export const generateInvoiceHTML = (
+  invoiceData: InvoiceData,
+  signatureDataUrl?: string | null
+): string => {
   return `
     <!DOCTYPE html>
     <html>
@@ -662,7 +690,7 @@ export const generateInvoiceHTML = (invoiceData: InvoiceData): string => {
                 <p style="font-size: 11px; margin-bottom: 10px;">Customer's Seal and Signature For</p>
                 <div class="company-signature">Sahaya Warehousing Company</div>
                 <div class="signature-line">
-                  <img src="/sign.png" alt="Digital Signature" style="width: 80px; height: 40px; object-fit: contain; margin: 10px auto; display: block;" />
+                  <img src="${signatureDataUrl ? signatureDataUrl : '/sign.png'}" alt="Digital Signature" style="width: 80px; height: 40px; object-fit: contain; margin: 10px auto; display: block;" />
                 </div>
               </div>
             </div>
