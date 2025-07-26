@@ -1,19 +1,3 @@
-// Always get base64 for sign.png (sync, for HTML fallback)
-export const getSignPngBase64 = async (): Promise<string | null> => {
-  try {
-    if (typeof window !== 'undefined') return null;
-    const fs = await import('fs');
-    const path = await import('path');
-    const signaturePath = path.join(process.cwd(), 'public', 'sign.png');
-    if (fs.existsSync(signaturePath)) {
-      const imageBuffer = fs.readFileSync(signaturePath);
-      return `data:image/png;base64,${imageBuffer.toString('base64')}`;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-};
 // Load signature image as base64 for server-side PDF generation
 const getSignatureBase64 = async (): Promise<string | null> => {
   try {
@@ -406,15 +390,10 @@ export const getSignatureBase64ForHTML = async (): Promise<string | null> => {
 };
 
 // Generate HTML content for invoice, optionally embedding signature as base64
-export const generateInvoiceHTML = async (
+export const generateInvoiceHTML = (
   invoiceData: InvoiceData,
   signatureDataUrl?: string | null
-): Promise<string> => {
-  // Always try to get base64 for sign.png if not provided
-  let finalSignature = signatureDataUrl;
-  if (!finalSignature) {
-    finalSignature = (await getSignPngBase64()) || '/sign.png';
-  }
+): string => {
   return `
     <!DOCTYPE html>
     <html>
@@ -728,7 +707,7 @@ export const generateInvoiceHTML = async (
                 <p style="font-size: 11px; margin-bottom: 10px;">Customer's Seal and Signature For</p>
                 <div class="company-signature">Sahaya Warehousing Company</div>
                 <div class="signature-line">
-                  <img src="${finalSignature}" alt="Digital Signature" style="width: 80px; height: 40px; object-fit: contain; margin: 10px auto; display: block;" />
+                  <img src="${signatureDataUrl || '/sign.png'}" alt="Digital Signature" style="width: 80px; height: 40px; object-fit: contain; margin: 10px auto; display: block;" />
                 </div>
               </div>
             </div>
@@ -743,10 +722,12 @@ export const generateInvoiceHTML = async (
 export const generatePDF = async (invoiceData: InvoiceData): Promise<string> => {
   try {
     // Generate HTML for PDF preview
-    const invoiceHTML = await generateInvoiceHTML(invoiceData);
+    const invoiceHTML = generateInvoiceHTML(invoiceData);
+    
     // Create a blob URL for the HTML content
     const blob = new Blob([invoiceHTML], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
+    
     return url;
   } catch (error) {
     console.error('Error generating PDF preview:', error);
