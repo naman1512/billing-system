@@ -1,19 +1,26 @@
 // Load signature image as base64 for server-side PDF generation
 const getSignatureBase64 = async (): Promise<string | null> => {
   try {
-    // Only run on server-side
     if (typeof window !== 'undefined') {
       return null;
     }
-    // For server-side, we need to read the file from the public directory
     const fs = await import('fs');
     const path = await import('path');
-    const signaturePath = path.join(process.cwd(), 'public', 'sign.png');
+    // Try to resolve the path relative to this file (robust for most deployments)
+    let signaturePath = path.join(__dirname, '../../../public/sign.png');
+    if (!fs.existsSync(signaturePath)) {
+      // Fallback to process.cwd() for local/dev
+      signaturePath = path.join(process.cwd(), 'public', 'sign.png');
+    }
     console.log('[Signature Debug] Checking for signature at:', signaturePath);
     if (fs.existsSync(signaturePath)) {
-      console.log('[Signature Debug] Signature file found.');
-      const imageBuffer = fs.readFileSync(signaturePath);
-      return `data:image/png;base64,${imageBuffer.toString('base64')}`;
+      try {
+        const imageBuffer = fs.readFileSync(signaturePath);
+        console.log('[Signature Debug] Signature file found and read.');
+        return `data:image/png;base64,${imageBuffer.toString('base64')}`;
+      } catch (err) {
+        console.error('[Signature Debug] Error reading signature file:', err);
+      }
     } else {
       console.warn('[Signature Debug] Signature file NOT found at:', signaturePath);
     }
@@ -362,25 +369,37 @@ export const getSignatureBase64ForHTML = async (): Promise<string | null> => {
     if (typeof window !== 'undefined') return null;
     const path = await import('path');
     const fs = await import('fs/promises');
-    // Try PNG first
+    // Try to resolve the path relative to this file (robust for most deployments)
+    let pngPath = path.join(__dirname, '../../../public/sign.png');
     try {
-      const pngPath = path.resolve(process.cwd(), 'public', 'sign.png');
-      console.log('[Signature Debug] (HTML) Checking for PNG signature at:', pngPath);
-      const pngBuffer = await fs.readFile(pngPath);
-      console.log('[Signature Debug] (HTML) PNG signature file found.');
+      let pngBuffer;
+      try {
+        pngBuffer = await fs.readFile(pngPath);
+      } catch {
+        // Fallback to process.cwd() for local/dev
+        pngPath = path.join(process.cwd(), 'public', 'sign.png');
+        pngBuffer = await fs.readFile(pngPath);
+      }
+      console.log('[Signature Debug] (HTML) PNG signature file found at:', pngPath);
       return `data:image/png;base64,${pngBuffer.toString('base64')}`;
-    } catch {
-      console.warn('[Signature Debug] (HTML) PNG signature file NOT found.');
+    } catch (err) {
+      console.warn('[Signature Debug] (HTML) PNG signature file NOT found at:', pngPath, err);
     }
     // Try JPEG fallback
+    let jpgPath = path.join(__dirname, '../../../public/sign.jpg');
     try {
-      const jpgPath = path.resolve(process.cwd(), 'public', 'sign.jpg');
-      console.log('[Signature Debug] (HTML) Checking for JPG signature at:', jpgPath);
-      const jpgBuffer = await fs.readFile(jpgPath);
-      console.log('[Signature Debug] (HTML) JPG signature file found.');
+      let jpgBuffer;
+      try {
+        jpgBuffer = await fs.readFile(jpgPath);
+      } catch {
+        // Fallback to process.cwd() for local/dev
+        jpgPath = path.join(process.cwd(), 'public', 'sign.jpg');
+        jpgBuffer = await fs.readFile(jpgPath);
+      }
+      console.log('[Signature Debug] (HTML) JPG signature file found at:', jpgPath);
       return `data:image/jpeg;base64,${jpgBuffer.toString('base64')}`;
-    } catch {
-      console.warn('[Signature Debug] (HTML) JPG signature file NOT found.');
+    } catch (err) {
+      console.warn('[Signature Debug] (HTML) JPG signature file NOT found at:', jpgPath, err);
     }
     return null;
   } catch (err) {
