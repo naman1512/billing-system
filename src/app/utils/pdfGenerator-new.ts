@@ -1,18 +1,16 @@
-// Load signature image as base64 for server-side PDF generation
+// Load signature image as base64 for server-side PDF generation (local and server)
 const getSignatureBase64 = async (): Promise<string | null> => {
   try {
     if (typeof window !== 'undefined') {
       return null;
     }
-    
-    // Use the API route instead of direct file access
-    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/signature`);
-    
-    if (response.ok) {
-      const data = await response.json();
-      return data.signature;
-    } else {
-      console.warn('Failed to fetch signature from API');
+    const path = await import('path');
+    const fs = await import('fs/promises');
+    const pngPath = path.resolve(process.cwd(), 'public', 'sign.png');
+    try {
+      const pngBuffer = await fs.readFile(pngPath);
+      return `data:image/png;base64,${pngBuffer.toString('base64')}`;
+    } catch {
       return null;
     }
   } catch (error) {
