@@ -1,26 +1,49 @@
-// Load signature image as base64 for server-side PDF generation (local and server)
+// Updated signature loading using public URL - works for both PDF and email
 const getSignatureBase64 = async (): Promise<string | null> => {
   try {
     if (typeof window !== 'undefined') {
+      return null; // Client-side, return null
+    }
+
+    // Get the base URL of your deployed app
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXTAUTH_URL 
+      ? process.env.NEXTAUTH_URL
+      : process.env.NEXT_PUBLIC_SITE_URL
+      ? process.env.NEXT_PUBLIC_SITE_URL
+      : 'https://billing-system-sahaya-warehousing.vercel.app';
+
+    // Fetch the signature image directly from the public URL
+    const signatureUrl = `${baseUrl}/sign.png`;
+    console.log('Loading signature from public URL:', signatureUrl);
+    
+    const response = await fetch(signatureUrl);
+    
+    if (response.ok) {
+      console.log('Successfully fetched signature from public URL');
+      
+      // Convert the response to buffer and then to base64
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const base64 = `data:image/png;base64,${buffer.toString('base64')}`;
+      
+      console.log('Signature converted to base64, length:', base64.length);
+      return base64;
+      
+    } else {
+      console.warn('Failed to fetch signature from public URL:', response.status, response.statusText);
       return null;
     }
-    const path = await import('path');
-    const fs = await import('fs/promises');
-    const pngPath = path.resolve(process.cwd(), 'public', 'sign.png');
-    try {
-      const pngBuffer = await fs.readFile(pngPath);
-      return `data:image/png;base64,${pngBuffer.toString('base64')}`;
-    } catch {
-      return null;
-    }
+    
   } catch (error) {
-    console.warn('Could not load signature image:', error);
+    console.warn('Could not load signature image from URL:', (error as Error).message);
     return null;
   }
 };
 
-// Create a fallback signature as base64 SVG
-function createFallbackSignature(): string {
+// Create SVG fallback signature
+function createSVGFallback(): string {
   const svgSignature = `
     <svg width="160" height="60" xmlns="http://www.w3.org/2000/svg">
       <style>
@@ -45,108 +68,53 @@ function createFallbackSignature(): string {
   return `data:image/svg+xml;base64,${base64Svg}`;
 }
 
-// Fixed version of getSignatureBase64ForHTML function
-export const getSignatureBase64ForHTML = async (): Promise<string | null> => {
+// Unified signature loading for both PDF and email
+export const getSignatureForEmailAndPDF = async (): Promise<string> => {
   try {
-    // Server-side: Load signature directly from file system
-    if (typeof window === 'undefined') {
-      const path = await import('path');
-      const fs = await import('fs/promises');
-      
-        
-      // Try multiple possible paths for the signature file
-      const possiblePaths = [
-        path.resolve(process.cwd(), 'public', 'sign.png'),
-        path.resolve(process.cwd(), 'public', 'assets', 'sign.png'),
-        path.resolve(process.cwd(), 'src', 'public', 'sign.png'),
-        path.resolve(process.cwd(), 'assets', 'sign.png')
-      ];
-      
-      for (const signPath of possiblePaths) {
-        try {
-          console.log(`Trying to load signature from: ${signPath}`);
-          const signBuffer = await fs.readFile(signPath);
-          const base64 = `data:image/png;base64,${signBuffer.toString('base64')}`;
-          console.log(`Successfully loaded signature, base64 length: ${base64.length}`);
-          return base64;
-        } catch (error: unknown) {
-          if (error && typeof error === 'object' && 'message' in error) {
-            console.log(`Failed to load from ${signPath}:`, (error as { message?: string }).message || 'Unknown error');
-          } else {
-            console.log(`Failed to load from ${signPath}:`, 'Unknown error');
-          }
-        }
-      }
-      
-     // If file loading fails, try the API approach as fallback
-      try {
-        const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-        const response = await fetch(`${baseUrl}/api/signature`);
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Successfully loaded signature from API');
-          return data.signature;
-        } else {
-          console.warn('API response not ok:', response.status, response.statusText);
-        }
-      } catch (apiError: unknown) {
-        if (apiError && typeof apiError === 'object' && 'message' in apiError) {
-          console.warn('API call failed:', (apiError as { message?: string }).message || 'Unknown error');
-        } else {
-          console.warn('API call failed:', 'Unknown error');
-        }
-      }
-    }
+    console.log('Loading signature for email/PDF generation...');
     
-    console.warn('Could not load signature image from any source');
-    return null;
-  } catch (error) {
-    console.error('Error in getSignatureBase64ForHTML:', error);
-    return null;
-  }
-};
-
-// Alternative: Create a more robust signature loading function
-export const loadSignatureForEmail = async (): Promise<string> => {
-  try {
-    const signatureBase64 = await getSignatureBase64ForHTML();
+    const signatureBase64 = await getSignatureBase64();
     
     if (signatureBase64) {
+      console.log('✅ PNG signature loaded successfully');
       return signatureBase64;
     }
     
-    // Fallback: Create a simple text-based signature
-    const fallbackSignature = createFallbackSignature();
-    return fallbackSignature;
+    // Fallback to SVG signature
+    console.log('📝 Using SVG fallback signature');
+    return createSVGFallback();
+    
   } catch (error) {
-    console.error('Failed to load signature, using fallback:', error);
-    return createFallbackSignature();
+    console.error('Failed to load signature, using SVG fallback:', (error as Error).message);
+    return createSVGFallback();
   }
 };
 
-// Updated generateInvoiceHTMLEmail function with better error handling
+// Updated email generation function
 export const generateInvoiceHTMLEmail = async (invoiceData: InvoiceData): Promise<string> => {
   try {
     console.log('Generating invoice HTML for email...');
-    const signatureDataUrl = await loadSignatureForEmail();
-    console.log('Signature loaded for email, length:', signatureDataUrl.length);
+    
+    const signatureDataUrl = await getSignatureForEmailAndPDF();
+    console.log('Signature loaded for email, type:', signatureDataUrl.startsWith('data:image/png') ? 'PNG' : 'SVG');
     
     const html = generateInvoiceHTML(invoiceData, signatureDataUrl);
     
-    // Log a portion of the HTML to verify signature is embedded
+    // Verify signature is embedded
     const signatureIndex = html.indexOf('data:image/');
     if (signatureIndex !== -1) {
-      console.log('Signature found in HTML at position:', signatureIndex);
+      console.log('✅ Signature successfully embedded in email HTML');
     } else {
-      console.warn('No signature data found in generated HTML');
+      console.warn('❌ No signature data found in generated HTML');
     }
     
     return html;
+    
   } catch (error) {
     console.error('Error generating invoice HTML for email:', error);
-    // Return HTML without signature rather than failing completely
-    return generateInvoiceHTML(invoiceData, null);
+    // Return HTML with fallback signature
+    const fallbackSignature = createSVGFallback();
+    return generateInvoiceHTML(invoiceData, fallbackSignature);
   }
 };
 
@@ -199,7 +167,7 @@ export function formatInvoiceDate(dateString: string): string {
   return `${day}${getOrdinal(day)} ${month} ${year}`;
 }
 
-// Generate PDF buffer for email attachment
+// Generate PDF buffer for email attachment with integrated signature loading
 export const generatePDFBuffer = async (invoiceData: InvoiceData): Promise<Buffer> => {
   try {
     const { jsPDF } = await getJsPDF();
@@ -399,7 +367,7 @@ export const generatePDFBuffer = async (invoiceData: InvoiceData): Promise<Buffe
     const splitWords = pdf.splitTextToSize(wordsText, contentWidth - 10);
     pdf.text(splitWords, margin + 5, currentY);
     
-    currentY += 8; /* Reduced spacing */
+    currentY += 8;
     
     // Additional information
     pdf.setFont('helvetica', 'normal');
@@ -445,18 +413,31 @@ export const generatePDFBuffer = async (invoiceData: InvoiceData): Promise<Buffe
     pdf.setLineWidth(0.3);
     pdf.line(signatureX, signatureY + 10, signatureX + 50, signatureY + 10);
     
-    // Try to add the actual signature image below the line
+    // Use the unified signature loading function
     try {
-      const signatureBase64 = await getSignatureBase64();
-      if (signatureBase64) {
-        // Add the actual signature image below the line
+      const signatureBase64 = await getSignatureForEmailAndPDF();
+      
+      if (signatureBase64 && signatureBase64.startsWith('data:image/png')) {
+        // Add the actual PNG signature image
         pdf.addImage(signatureBase64, 'PNG', signatureX + 5, signatureY + 12, 40, 15);
+        console.log('✅ PNG signature added to PDF');
+      } else if (signatureBase64 && signatureBase64.startsWith('data:image/svg')) {
+        // For SVG, we'll use text fallback in PDF since jsPDF doesn't handle SVG well
+        console.log('📝 Using text signature in PDF (SVG fallback)');
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(12);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text('Sahaya Warehousing', signatureX + 5, signatureY + 20);
+        pdf.text('Company', signatureX + 15, signatureY + 24);
+        pdf.setLineWidth(0.5);
+        pdf.line(signatureX + 5, signatureY + 26, signatureX + 35, signatureY + 26);
+        pdf.line(signatureX + 10, signatureY + 28, signatureX + 30, signatureY + 28);
       } else {
-        throw new Error('Signature image not found');
+        throw new Error('No valid signature loaded');
       }
     } catch (error) {
-      console.warn('Could not add signature image, using stylized text:', error);
-      // Fallback - create a stylized signature text below the line
+      console.warn('Could not add signature image to PDF, using stylized text:', (error as Error).message);
+      // Fallback - create a stylized signature text
       pdf.setFont('helvetica', 'italic');
       pdf.setFontSize(12);
       pdf.setTextColor(0, 0, 0);
@@ -481,17 +462,37 @@ export const generateInvoiceHTML = (
   invoiceData: InvoiceData,
   signatureDataUrl?: string | null
 ): string => {
-  // Determine what to use for signature
+  console.log('Generating HTML with signature:', signatureDataUrl ? 'YES' : 'NO');
+  
+  // Determine signature content
   let signatureContent = '';
   
   if (signatureDataUrl && signatureDataUrl.startsWith('data:image/')) {
-    // Use the embedded base64 image
-    signatureContent = `<img src="${signatureDataUrl}" alt="Digital Signature" style="width: 80px; height: 40px; object-fit: contain; margin: 10px auto; display: block;" onerror="this.style.display='none';" />`;
-  } else {
-    // Fallback to styled text
+    // Use the embedded base64 image (PNG or SVG)
+    const imageType = signatureDataUrl.startsWith('data:image/png') ? 'PNG' : 'SVG';
+    console.log(`Using ${imageType} signature in HTML`);
+    
     signatureContent = `
-      <div style="margin: 10px auto; text-align: center;">
-        <div style="font-family: cursive; font-size: 16px; color: #000080; font-weight: bold; line-height: 1.2;">
+      <img 
+        src="${signatureDataUrl}" 
+        alt="Digital Signature" 
+        style="
+          width: 80px !important; 
+          height: 40px !important; 
+          object-fit: contain; 
+          margin: 10px auto; 
+          display: block;
+          max-width: 80px;
+          max-height: 40px;
+        " 
+        onerror="console.log('Signature image failed to load'); this.style.display='none';" 
+      />`;
+  } else {
+    // Text fallback
+    console.log('Using text fallback signature in HTML');
+    signatureContent = `
+      <div style="margin: 10px auto; text-align: center; font-family: cursive;">
+        <div style="font-size: 16px; color: #000080; font-weight: bold; line-height: 1.2;">
           Sahaya Warehousing<br>Company
         </div>
         <div style="border-bottom: 2px solid #000080; width: 80px; margin: 5px auto;"></div>
@@ -504,6 +505,7 @@ export const generateInvoiceHTML = (
     <html>
       <head>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Invoice</title>
         <style>
           @page {
@@ -512,111 +514,111 @@ export const generateInvoiceHTML = (
           }
           
           body { 
-            font-family: 'Arial', 'Helvetica', sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: white;
-            color: #333;
-            line-height: 1.4;
+            font-family: 'Arial', 'Helvetica', sans-serif !important;
+            margin: 0 !important;
+            padding: 20px !important;
+            background: white !important;
+            color: #333 !important;
+            line-height: 1.4 !important;
           }
           
           .invoice-container {
-            max-width: 800px;
-            margin: 0 auto;
-            border: 2px solid #000;
-            padding: 30px;
-            background: white;
+            max-width: 800px !important;
+            margin: 0 auto !important;
+            border: 2px solid #000 !important;
+            padding: 30px !important;
+            background: white !important;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
           }
           
           .inner-border {
-            border: 1px solid #666;
-            padding: 20px;
+            border: 1px solid #666 !important;
+            padding: 20px !important;
             min-height: 90vh;
           }
           
           .header {
-            text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #000;
-            padding-bottom: 20px;
+            text-align: center !important;
+            margin-bottom: 30px !important;
+            border-bottom: 2px solid #000 !important;
+            padding-bottom: 20px !important;
           }
           
           .company-name {
-            font-size: 24px;
-            font-weight: bold;
-            color: #dc2626;
-            margin-bottom: 8px;
-            letter-spacing: 1px;
+            font-size: 24px !important;
+            font-weight: bold !important;
+            color: #dc2626 !important;
+            margin-bottom: 8px !important;
+            letter-spacing: 1px !important;
           }
           
           .company-address {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 15px;
+            font-size: 12px !important;
+            color: #666 !important;
+            margin-bottom: 15px !important;
           }
           
           .invoice-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #000;
-            margin-top: 10px;
+            font-size: 18px !important;
+            font-weight: bold !important;
+            color: #000 !important;
+            margin-top: 10px !important;
           }
           
           .invoice-details {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 30px;
-            gap: 40px;
+            display: flex !important;
+            justify-content: space-between !important;
+            margin-bottom: 30px !important;
+            gap: 40px !important;
           }
           
           .billing-info {
-            flex: 1;
+            flex: 1 !important;
           }
           
           .company-info {
-            flex: 1;
-            text-align: right;
+            flex: 1 !important;
+            text-align: right !important;
           }
           
           .billing-info h3,
           .company-info h3 {
-            font-size: 12px;
-            margin-bottom: 10px;
-            font-weight: bold;
+            font-size: 12px !important;
+            margin-bottom: 10px !important;
+            font-weight: bold !important;
           }
           
           .billing-info p,
           .company-info p {
-            margin: 4px 0;
-            font-size: 11px;
+            margin: 4px 0 !important;
+            font-size: 11px !important;
           }
           
           .invoice-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 30px 0;
-            border: 2px solid #000;
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin: 30px 0 !important;
+            border: 2px solid #000 !important;
           }
           
           .invoice-table th {
-            background: #f0f0f0;
-            padding: 12px 8px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 12px;
-            border: 1px solid #000;
+            background: #f0f0f0 !important;
+            padding: 12px 8px !important;
+            text-align: center !important;
+            font-weight: bold !important;
+            font-size: 12px !important;
+            border: 1px solid #000 !important;
           }
           
           .invoice-table td {
-            padding: 12px 8px;
-            text-align: center;
-            font-size: 11px;
-            border: 1px solid #000;
+            padding: 12px 8px !important;
+            text-align: center !important;
+            font-size: 11px !important;
+            border: 1px solid #000 !important;
           }
           
           .invoice-table tr:nth-child(even) {
-            background: #fafafa;
+            background: #fafafa !important;
           }
           
           .particulars {
@@ -627,117 +629,114 @@ export const generateInvoiceHTML = (
           .amount {
             text-align: right !important;
             padding-right: 15px !important;
-            font-weight: bold;
+            font-weight: bold !important;
           }
           
           .total-row {
             background: #e0e0e0 !important;
-            font-weight: bold;
+            font-weight: bold !important;
           }
           
           .total-row td {
-            border-top: 2px solid #000;
-            font-size: 13px;
+            border-top: 2px solid #000 !important;
+            font-size: 13px !important;
           }
           
           .amount-words {
-            margin: 8px 0; /* Reduced margin to minimize gap */
-            padding: 15px;
-            background: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            margin: 8px 0 !important;
+            padding: 15px !important;
+            background: #f9f9f9 !important;
+            border: 1px solid #ddd !important;
+            border-radius: 4px !important;
           }
           
           .amount-words strong {
-            font-weight: bold;
-            color: #000;
+            font-weight: bold !important;
+            color: #000 !important;
           }
           
           .footer-info {
-            margin: 30px 0;
-            font-size: 11px;
-            line-height: 1.6;
+            margin: 30px 0 !important;
+            font-size: 11px !important;
+            line-height: 1.6 !important;
           }
           
           .footer-info p {
-            margin: 6px 0;
+            margin: 6px 0 !important;
           }
           
           .bank-details {
-            font-weight: bold;
-            color: #000;
+            font-weight: bold !important;
+            color: #000 !important;
           }
           
           .declaration {
-            margin: 25px 0;
-            padding: 15px;
-            background: #f9f9f9;
-            border-left: 4px solid #dc2626;
-            font-size: 10px;
-            line-height: 1.5;
+            margin: 25px 0 !important;
+            padding: 15px !important;
+            background: #f9f9f9 !important;
+            border-left: 4px solid #dc2626 !important;
+            font-size: 10px !important;
+            line-height: 1.5 !important;
           }
           
           .declaration h4 {
-            margin: 0 0 10px 0;
-            font-size: 11px;
-            font-weight: bold;
+            margin: 0 0 10px 0 !important;
+            font-size: 11px !important;
+            font-weight: bold !important;
           }
           
           .signature-section {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 40px;
-            padding-top: 20px;
+            display: flex !important;
+            justify-content: flex-end !important;
+            margin-top: 40px !important;
+            padding-top: 20px !important;
           }
           
           .signature-box {
-            text-align: center;
-            border: 1px solid #ccc;
-            padding: 20px;
-            width: 200px;
-            background: #fafafa;
+            text-align: center !important;
+            border: 1px solid #ccc !important;
+            padding: 20px !important;
+            width: 200px !important;
+            background: #fafafa !important;
           }
           
           .signature-line {
-            border-bottom: 1px solid #000;
-            height: 60px;
-            margin: 20px 0 10px 0;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            border-bottom: 1px solid #000 !important;
+            height: 60px !important;
+            margin: 20px 0 10px 0 !important;
+            position: relative !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
           }
           
           .signature-text {
-            font-size: 10px;
-            color: #666;
-            margin-top: 5px;
+            font-size: 10px !important;
+            color: #666 !important;
+            margin-top: 5px !important;
           }
           
           .company-signature {
-            font-weight: bold;
-            font-size: 12px;
-            margin-bottom: 2px; /* Reduced margin to minimize gap */
+            font-weight: bold !important;
+            font-size: 12px !important;
+            margin-bottom: 2px !important;
           }
           
-          /* Email-specific styles */
-          @media screen {
-            .signature-line img {
-              max-width: 80px !important;
-              max-height: 40px !important;
-              width: auto !important;
-              height: auto !important;
-            }
+          .signature-line img {
+            max-width: 80px !important;
+            max-height: 40px !important;
+            width: auto !important;
+            height: auto !important;
           }
           
           @media print {
             body { 
-              margin: 0;
-              padding: 0;
+              margin: 0 !important;
+              padding: 0 !important;
             }
             .invoice-container {
-              box-shadow: none;
-              border: 2px solid #000;
+              box-shadow: none !important;
+              border: 2px solid #000 !important;
             }
           }
         </style>
@@ -853,20 +852,31 @@ export const generatePDF = async (invoiceData: InvoiceData): Promise<string> => 
   }
 };
 
-// Additional debugging function to test signature loading
+// Debug function to test signature loading - call this in your email sending code
 export const testSignatureLoading = async (): Promise<void> => {
-  console.log('Testing signature loading...');
+  console.log('🔍 TESTING SIGNATURE LOADING...');
+  console.log('Production URL: https://billing-system-sahaya-warehousing.vercel.app');
   
   try {
-    const signature = await getSignatureBase64ForHTML();
-    if (signature) {
-      console.log('✅ Signature loaded successfully');
-      console.log('Signature type:', signature.substring(0, 30) + '...');
-      console.log('Signature length:', signature.length);
-    } else {
-      console.log('❌ Signature loading failed');
+    const signature = await getSignatureForEmailAndPDF();
+    
+    console.log('✅ Signature loaded successfully');
+    console.log('Type:', signature.startsWith('data:image/png') ? 'PNG' : signature.startsWith('data:image/svg') ? 'SVG' : 'Unknown');
+    console.log('Length:', signature.length);
+    console.log('First 50 chars:', signature.substring(0, 50));
+    
+    // Test if it's valid base64
+    try {
+      const base64Data = signature.split(',')[1];
+      const buffer = Buffer.from(base64Data, 'base64');
+      console.log('✅ Valid base64 format, decoded size:', buffer.length, 'bytes');
+    } catch {
+      console.warn('❌ Invalid base64 format');
     }
+    
   } catch (error) {
-    console.error('❌ Error testing signature:', error);
+    console.error('❌ Test failed:', error);
   }
+  
+  console.log('🔍 TEST COMPLETE\n');
 };
