@@ -1,34 +1,10 @@
-// Load signature image as base64 for server-side PDF generation
+// EMBEDDED BASE64 SIGNATURE IMAGE (replace the string below with your actual base64 data)
+const EMBEDDED_SIGNATURE_BASE64 =
+  'data:image/png;base64,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';
+
+// Always return the embedded base64 string for maximum reliability
 const getSignatureBase64 = async (): Promise<string | null> => {
-  try {
-    if (typeof window !== 'undefined') {
-      return null;
-    }
-    const fs = await import('fs');
-    const path = await import('path');
-    // Try to resolve the path relative to this file (robust for most deployments)
-    let signaturePath = path.join(__dirname, '../../../public/sign.png');
-    if (!fs.existsSync(signaturePath)) {
-      // Fallback to process.cwd() for local/dev
-      signaturePath = path.join(process.cwd(), 'public', 'sign.png');
-    }
-    console.log('[Signature Debug] Checking for signature at:', signaturePath);
-    if (fs.existsSync(signaturePath)) {
-      try {
-        const imageBuffer = fs.readFileSync(signaturePath);
-        console.log('[Signature Debug] Signature file found and read.');
-        return `data:image/png;base64,${imageBuffer.toString('base64')}`;
-      } catch (err) {
-        console.error('[Signature Debug] Error reading signature file:', err);
-      }
-    } else {
-      console.warn('[Signature Debug] Signature file NOT found at:', signaturePath);
-    }
-    return null;
-  } catch (error) {
-    console.warn('Could not load signature image:', error);
-    return null;
-  }
+  return EMBEDDED_SIGNATURE_BASE64;
 };
 // Helper to generate invoice HTML for emails with embedded signature
 export const generateInvoiceHTMLEmail = async (invoiceData: InvoiceData): Promise<string> => {
@@ -365,47 +341,7 @@ export const generatePDFBuffer = async (invoiceData: InvoiceData): Promise<Buffe
 // Generate HTML content for invoice
 // Helper to get base64 signature for server-side HTML embedding
 export const getSignatureBase64ForHTML = async (): Promise<string | null> => {
-  try {
-    if (typeof window !== 'undefined') return null;
-    const path = await import('path');
-    const fs = await import('fs/promises');
-    // Try to resolve the path relative to this file (robust for most deployments)
-    let pngPath = path.join(__dirname, '../../../public/sign.png');
-    try {
-      let pngBuffer;
-      try {
-        pngBuffer = await fs.readFile(pngPath);
-      } catch {
-        // Fallback to process.cwd() for local/dev
-        pngPath = path.join(process.cwd(), 'public', 'sign.png');
-        pngBuffer = await fs.readFile(pngPath);
-      }
-      console.log('[Signature Debug] (HTML) PNG signature file found at:', pngPath);
-      return `data:image/png;base64,${pngBuffer.toString('base64')}`;
-    } catch (err) {
-      console.warn('[Signature Debug] (HTML) PNG signature file NOT found at:', pngPath, err);
-    }
-    // Try JPEG fallback
-    let jpgPath = path.join(__dirname, '../../../public/sign.jpg');
-    try {
-      let jpgBuffer;
-      try {
-        jpgBuffer = await fs.readFile(jpgPath);
-      } catch {
-        // Fallback to process.cwd() for local/dev
-        jpgPath = path.join(process.cwd(), 'public', 'sign.jpg');
-        jpgBuffer = await fs.readFile(jpgPath);
-      }
-      console.log('[Signature Debug] (HTML) JPG signature file found at:', jpgPath);
-      return `data:image/jpeg;base64,${jpgBuffer.toString('base64')}`;
-    } catch (err) {
-      console.warn('[Signature Debug] (HTML) JPG signature file NOT found at:', jpgPath, err);
-    }
-    return null;
-  } catch (err) {
-    console.warn('[Signature Debug] (HTML) Error loading signature:', err);
-    return null;
-  }
+  return EMBEDDED_SIGNATURE_BASE64;
 };
 
 // Generate HTML content for invoice, optionally embedding signature as base64
