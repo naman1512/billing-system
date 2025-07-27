@@ -36,7 +36,7 @@ interface Company {
 
 export default function CompanyInvoicesPage() {
   const params = useParams();
-  const companyId = params.id as string;
+  const companyId = params?.id ? (params.id as string) : '';
   
   const [company, setCompany] = useState<Company | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
