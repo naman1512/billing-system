@@ -18,10 +18,136 @@ const getSignatureBase64 = async (): Promise<string | null> => {
     return null;
   }
 };
-// Helper to generate invoice HTML for emails with embedded signature
+
+// Create a fallback signature as base64 SVG
+function createFallbackSignature(): string {
+  const svgSignature = `
+    <svg width="160" height="60" xmlns="http://www.w3.org/2000/svg">
+      <style>
+        .signature-text { 
+          font-family: 'Brush Script MT', cursive, serif; 
+          font-size: 18px; 
+          fill: #000080; 
+          font-weight: bold;
+        }
+        .underline { 
+          stroke: #000080; 
+          stroke-width: 2; 
+        }
+      </style>
+      <text x="10" y="25" class="signature-text">Sahaya Warehousing</text>
+      <text x="40" y="45" class="signature-text">Company</text>
+      <line x1="10" y1="50" x2="140" y2="50" class="underline"/>
+    </svg>
+  `;
+  
+  const base64Svg = Buffer.from(svgSignature).toString('base64');
+  return `data:image/svg+xml;base64,${base64Svg}`;
+}
+
+// Fixed version of getSignatureBase64ForHTML function
+export const getSignatureBase64ForHTML = async (): Promise<string | null> => {
+  try {
+    // Server-side: Load signature directly from file system
+    if (typeof window === 'undefined') {
+      const path = await import('path');
+      const fs = await import('fs/promises');
+      
+        
+      // Try multiple possible paths for the signature file
+      const possiblePaths = [
+        path.resolve(process.cwd(), 'public', 'sign.png'),
+        path.resolve(process.cwd(), 'public', 'assets', 'sign.png'),
+        path.resolve(process.cwd(), 'src', 'public', 'sign.png'),
+        path.resolve(process.cwd(), 'assets', 'sign.png')
+      ];
+      
+      for (const signPath of possiblePaths) {
+        try {
+          console.log(`Trying to load signature from: ${signPath}`);
+          const signBuffer = await fs.readFile(signPath);
+          const base64 = `data:image/png;base64,${signBuffer.toString('base64')}`;
+          console.log(`Successfully loaded signature, base64 length: ${base64.length}`);
+          return base64;
+        } catch (error: unknown) {
+          if (error && typeof error === 'object' && 'message' in error) {
+            console.log(`Failed to load from ${signPath}:`, (error as { message?: string }).message || 'Unknown error');
+          } else {
+            console.log(`Failed to load from ${signPath}:`, 'Unknown error');
+          }
+        }
+      }
+      
+     // If file loading fails, try the API approach as fallback
+      try {
+        const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+        const response = await fetch(`${baseUrl}/api/signature`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Successfully loaded signature from API');
+          return data.signature;
+        } else {
+          console.warn('API response not ok:', response.status, response.statusText);
+        }
+      } catch (apiError: unknown) {
+        if (apiError && typeof apiError === 'object' && 'message' in apiError) {
+          console.warn('API call failed:', (apiError as { message?: string }).message || 'Unknown error');
+        } else {
+          console.warn('API call failed:', 'Unknown error');
+        }
+      }
+    }
+    
+    console.warn('Could not load signature image from any source');
+    return null;
+  } catch (error) {
+    console.error('Error in getSignatureBase64ForHTML:', error);
+    return null;
+  }
+};
+
+// Alternative: Create a more robust signature loading function
+export const loadSignatureForEmail = async (): Promise<string> => {
+  try {
+    const signatureBase64 = await getSignatureBase64ForHTML();
+    
+    if (signatureBase64) {
+      return signatureBase64;
+    }
+    
+    // Fallback: Create a simple text-based signature
+    const fallbackSignature = createFallbackSignature();
+    return fallbackSignature;
+  } catch (error) {
+    console.error('Failed to load signature, using fallback:', error);
+    return createFallbackSignature();
+  }
+};
+
+// Updated generateInvoiceHTMLEmail function with better error handling
 export const generateInvoiceHTMLEmail = async (invoiceData: InvoiceData): Promise<string> => {
-  const signatureDataUrl = await getSignatureBase64ForHTML();
-  return generateInvoiceHTML(invoiceData, signatureDataUrl);
+  try {
+    console.log('Generating invoice HTML for email...');
+    const signatureDataUrl = await loadSignatureForEmail();
+    console.log('Signature loaded for email, length:', signatureDataUrl.length);
+    
+    const html = generateInvoiceHTML(invoiceData, signatureDataUrl);
+    
+    // Log a portion of the HTML to verify signature is embedded
+    const signatureIndex = html.indexOf('data:image/');
+    if (signatureIndex !== -1) {
+      console.log('Signature found in HTML at position:', signatureIndex);
+    } else {
+      console.warn('No signature data found in generated HTML');
+    }
+    
+    return html;
+  } catch (error) {
+    console.error('Error generating invoice HTML for email:', error);
+    // Return HTML without signature rather than failing completely
+    return generateInvoiceHTML(invoiceData, null);
+  }
 };
 
 // Interface for invoice data
@@ -350,33 +476,29 @@ export const generatePDFBuffer = async (invoiceData: InvoiceData): Promise<Buffe
   }
 };
 
-// Generate HTML content for invoice
-// Helper to get base64 signature for server-side HTML embedding
-export const getSignatureBase64ForHTML = async (): Promise<string | null> => {
-  try {
-    if (typeof window !== 'undefined') return null;
-    
-    // Use the API route instead of direct file access
-    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/signature`);
-    
-    if (response.ok) {
-      const data = await response.json();
-      return data.signature;
-    } else {
-      console.warn('Failed to fetch signature from API');
-      return null;
-    }
-  } catch (error) {
-    console.warn('Could not load signature image:', error);
-    return null;
-  }
-};
-
-// Generate HTML content for invoice, optionally embedding signature as base64
+// Updated HTML generation with better signature handling
 export const generateInvoiceHTML = (
   invoiceData: InvoiceData,
   signatureDataUrl?: string | null
 ): string => {
+  // Determine what to use for signature
+  let signatureContent = '';
+  
+  if (signatureDataUrl && signatureDataUrl.startsWith('data:image/')) {
+    // Use the embedded base64 image
+    signatureContent = `<img src="${signatureDataUrl}" alt="Digital Signature" style="width: 80px; height: 40px; object-fit: contain; margin: 10px auto; display: block;" onerror="this.style.display='none';" />`;
+  } else {
+    // Fallback to styled text
+    signatureContent = `
+      <div style="margin: 10px auto; text-align: center;">
+        <div style="font-family: cursive; font-size: 16px; color: #000080; font-weight: bold; line-height: 1.2;">
+          Sahaya Warehousing<br>Company
+        </div>
+        <div style="border-bottom: 2px solid #000080; width: 80px; margin: 5px auto;"></div>
+      </div>
+    `;
+  }
+
   return `
     <!DOCTYPE html>
     <html>
@@ -581,6 +703,9 @@ export const generateInvoiceHTML = (
             height: 60px;
             margin: 20px 0 10px 0;
             position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
           }
           
           .signature-text {
@@ -593,6 +718,16 @@ export const generateInvoiceHTML = (
             font-weight: bold;
             font-size: 12px;
             margin-bottom: 2px; /* Reduced margin to minimize gap */
+          }
+          
+          /* Email-specific styles */
+          @media screen {
+            .signature-line img {
+              max-width: 80px !important;
+              max-height: 40px !important;
+              width: auto !important;
+              height: auto !important;
+            }
           }
           
           @media print {
@@ -690,7 +825,7 @@ export const generateInvoiceHTML = (
                 <p style="font-size: 11px; margin-bottom: 10px;">Customer's Seal and Signature For</p>
                 <div class="company-signature">Sahaya Warehousing Company</div>
                 <div class="signature-line">
-                  <img src="${signatureDataUrl || '/sign.png'}" alt="Digital Signature" style="width: 80px; height: 40px; object-fit: contain; margin: 10px auto; display: block;" />
+                  ${signatureContent}
                 </div>
               </div>
             </div>
@@ -715,5 +850,23 @@ export const generatePDF = async (invoiceData: InvoiceData): Promise<string> => 
   } catch (error) {
     console.error('Error generating PDF preview:', error);
     throw new Error('Failed to generate PDF preview');
+  }
+};
+
+// Additional debugging function to test signature loading
+export const testSignatureLoading = async (): Promise<void> => {
+  console.log('Testing signature loading...');
+  
+  try {
+    const signature = await getSignatureBase64ForHTML();
+    if (signature) {
+      console.log('✅ Signature loaded successfully');
+      console.log('Signature type:', signature.substring(0, 30) + '...');
+      console.log('Signature length:', signature.length);
+    } else {
+      console.log('❌ Signature loading failed');
+    }
+  } catch (error) {
+    console.error('❌ Error testing signature:', error);
   }
 };
