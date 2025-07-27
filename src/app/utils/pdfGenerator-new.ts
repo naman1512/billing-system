@@ -1,23 +1,20 @@
 // Load signature image as base64 for server-side PDF generation
 const getSignatureBase64 = async (): Promise<string | null> => {
   try {
-    // Only run on server-side
     if (typeof window !== 'undefined') {
       return null;
     }
-    // For server-side, we need to read the file from the public directory
-    const fs = await import('fs');
-    const path = await import('path');
-    const signaturePath = path.join(process.cwd(), 'public', 'sign.png');
-    console.log('[Signature Debug] Checking for signature at:', signaturePath);
-    if (fs.existsSync(signaturePath)) {
-      console.log('[Signature Debug] Signature file found.');
-      const imageBuffer = fs.readFileSync(signaturePath);
-      return `data:image/png;base64,${imageBuffer.toString('base64')}`;
+    
+    // Use the API route instead of direct file access
+    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/signature`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      return data.signature;
     } else {
-      console.warn('[Signature Debug] Signature file NOT found at:', signaturePath);
+      console.warn('Failed to fetch signature from API');
+      return null;
     }
-    return null;
   } catch (error) {
     console.warn('Could not load signature image:', error);
     return null;
@@ -360,31 +357,19 @@ export const generatePDFBuffer = async (invoiceData: InvoiceData): Promise<Buffe
 export const getSignatureBase64ForHTML = async (): Promise<string | null> => {
   try {
     if (typeof window !== 'undefined') return null;
-    const path = await import('path');
-    const fs = await import('fs/promises');
-    // Try PNG first
-    try {
-      const pngPath = path.resolve(process.cwd(), 'public', 'sign.png');
-      console.log('[Signature Debug] (HTML) Checking for PNG signature at:', pngPath);
-      const pngBuffer = await fs.readFile(pngPath);
-      console.log('[Signature Debug] (HTML) PNG signature file found.');
-      return `data:image/png;base64,${pngBuffer.toString('base64')}`;
-    } catch {
-      console.warn('[Signature Debug] (HTML) PNG signature file NOT found.');
+    
+    // Use the API route instead of direct file access
+    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/signature`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      return data.signature;
+    } else {
+      console.warn('Failed to fetch signature from API');
+      return null;
     }
-    // Try JPEG fallback
-    try {
-      const jpgPath = path.resolve(process.cwd(), 'public', 'sign.jpg');
-      console.log('[Signature Debug] (HTML) Checking for JPG signature at:', jpgPath);
-      const jpgBuffer = await fs.readFile(jpgPath);
-      console.log('[Signature Debug] (HTML) JPG signature file found.');
-      return `data:image/jpeg;base64,${jpgBuffer.toString('base64')}`;
-    } catch {
-      console.warn('[Signature Debug] (HTML) JPG signature file NOT found.');
-    }
-    return null;
-  } catch (err) {
-    console.warn('[Signature Debug] (HTML) Error loading signature:', err);
+  } catch (error) {
+    console.warn('Could not load signature image:', error);
     return null;
   }
 };
