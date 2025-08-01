@@ -6,12 +6,28 @@ const getSignatureBase64 = async (): Promise<string | null> => {
     }
     const path = await import('path');
     const fs = await import('fs/promises');
+    
+    // Try PNG first
     const pngPath = path.resolve(process.cwd(), 'public', 'sign.png');
     try {
       const pngBuffer = await fs.readFile(pngPath);
-      return `data:image/png;base64,${pngBuffer.toString('base64')}`;
-    } catch {
-      return null;
+      const base64 = `data:image/png;base64,${pngBuffer.toString('base64')}`;
+      console.log('Successfully loaded signature from PNG file');
+      return base64;
+    } catch (pngError) {
+      console.warn('PNG signature not found, trying JPG:', pngError);
+      
+      // Try JPG fallback
+      const jpgPath = path.resolve(process.cwd(), 'public', 'sign.jpg');
+      try {
+        const jpgBuffer = await fs.readFile(jpgPath);
+        const base64 = `data:image/jpeg;base64,${jpgBuffer.toString('base64')}`;
+        console.log('Successfully loaded signature from JPG file');
+        return base64;
+      } catch (jpgError) {
+        console.warn('JPG signature not found:', jpgError);
+        return null;
+      }
     }
   } catch (error) {
     console.warn('Could not load signature image:', error);
@@ -20,7 +36,12 @@ const getSignatureBase64 = async (): Promise<string | null> => {
 };
 // Helper to generate invoice HTML for emails with embedded signature
 export const generateInvoiceHTMLEmail = async (invoiceData: InvoiceData): Promise<string> => {
+  console.log('Generating invoice HTML email...');
   const signatureDataUrl = await getSignatureBase64ForHTML();
+  console.log('Signature data URL for email:', signatureDataUrl ? 'Found' : 'Not found');
+  if (signatureDataUrl) {
+    console.log('Signature length:', signatureDataUrl.length, 'characters');
+  }
   return generateInvoiceHTML(invoiceData, signatureDataUrl);
 };
 
@@ -323,9 +344,12 @@ export const generatePDFBuffer = async (invoiceData: InvoiceData): Promise<Buffe
     try {
       const signatureBase64 = await getSignatureBase64();
       if (signatureBase64) {
+        console.log('Adding signature image to PDF');
         // Add the actual signature image below the line
         pdf.addImage(signatureBase64, 'PNG', signatureX + 5, signatureY + 12, 40, 15);
+        console.log('Signature image added successfully');
       } else {
+        console.warn('Signature base64 is null, using fallback');
         throw new Error('Signature image not found');
       }
     } catch (error) {
@@ -356,15 +380,31 @@ export const getSignatureBase64ForHTML = async (): Promise<string | null> => {
   try {
     if (typeof window !== 'undefined') return null;
     
-    // Use the API route instead of direct file access
-    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/signature`);
-    
-    if (response.ok) {
-      const data = await response.json();
-      return data.signature;
-    } else {
-      console.warn('Failed to fetch signature from API');
-      return null;
+    // Try direct file access first (more reliable for server-side)
+    try {
+      const path = await import('path');
+      const fs = await import('fs/promises');
+      const pngPath = path.resolve(process.cwd(), 'public', 'sign.png');
+      const pngBuffer = await fs.readFile(pngPath);
+      return `data:image/png;base64,${pngBuffer.toString('base64')}`;
+    } catch (fileError) {
+      console.warn('Direct file access failed, trying API route:', fileError);
+      
+      // Fallback to API route
+      const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/signature`, {
+        headers: {
+          'User-Agent': 'PDF-Generator/1.0',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.signature;
+      } else {
+        console.warn('Failed to fetch signature from API:', response.status, response.statusText);
+        return null;
+      }
     }
   } catch (error) {
     console.warn('Could not load signature image:', error);
@@ -690,7 +730,10 @@ export const generateInvoiceHTML = (
                 <p style="font-size: 11px; margin-bottom: 10px;">Customer's Seal and Signature For</p>
                 <div class="company-signature">Sahaya Warehousing Company</div>
                 <div class="signature-line">
-                  <img src="${signatureDataUrl || '/sign.png'}" alt="Digital Signature" style="width: 80px; height: 40px; object-fit: contain; margin: 10px auto; display: block;" />
+                  ${signatureDataUrl ? 
+                    `<img src="${signatureDataUrl}" alt="Digital Signature" style="width: 80px; height: 40px; object-fit: contain; margin: 10px auto; display: block;" onerror="this.style.display='none';" />` : 
+                    `<div style="width: 80px; height: 40px; margin: 10px auto; display: flex; align-items: center; justify-content: center; font-style: italic; font-size: 10px; color: #666;">Signature</div>`
+                  }
                 </div>
               </div>
             </div>
