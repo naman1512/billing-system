@@ -375,10 +375,11 @@ export default function CreateBill() {
         companyId: company.id,
         refNumber: refNumber,
         amount: parseFloat(grandTotal),
-        invoiceDate: invoiceDate, // Add the invoice date
+        invoiceDate: invoiceDate, // Pass the invoice date from the form
         rentDescription: rentDescription || (rentMonth && rentYear ? `Rent for the month of ${rentMonth} '${rentYear}` : undefined),
         emailRecipient: '', // Can be filled later when sending email
-        status: 'DRAFT' // Mark as draft since it's just saved, not sent
+        status: 'DRAFT', // Mark as draft since it's just saved, not sent
+        invoiceData: invoiceData // Store complete invoice data for historical accuracy
       };
 
       await invoicesAPI.create(invoicePayload, pdfFile);
