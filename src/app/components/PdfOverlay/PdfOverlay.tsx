@@ -140,10 +140,12 @@ Harsh Vardhan Bhandari
               companyId,
               refNumber: invoiceData.refNumber,
               amount: parseFloat(invoiceData.grandTotal),
+              invoiceDate: invoiceData.invoiceDate, // Required field
               rentDescription: invoiceData.rentDescription || `Rent for the month of ${invoiceData.rentMonth} '${invoiceData.rentYear}`,
               dueDate: invoiceData.invoiceDate, // Same as invoice date for rent bills
               emailRecipient: recipientEmail,
-              status: 'SENT' // Mark as sent since we just emailed it
+              status: 'SENT', // Mark as sent since we just emailed it
+              invoiceData: invoiceData // Save the complete invoice data
             });
 
             if (invoiceResult) {
@@ -169,23 +171,59 @@ Harsh Vardhan Bhandari
             // Generate actual PDF for download with signature
             const { jsPDF } = await import('jspdf');
             
-            // Load signature image as base64 for browser
-            const loadSignatureImage = (): Promise<string> => {
-              return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.onload = () => {
-                  const canvas = document.createElement('canvas');
-                  const ctx = canvas.getContext('2d');
-                  canvas.width = img.width;
-                  canvas.height = img.height;
-                  ctx?.drawImage(img, 0, 0);
-                  const dataURL = canvas.toDataURL('image/png');
-                  resolve(dataURL);
-                };
-                img.onerror = () => reject(new Error('Failed to load signature image'));
-                img.src = '/sign.png';
-              });
+            // Load signature image as base64 for browser with robust fallback
+            const loadSignatureImage = async (): Promise<string | null> => {
+              try {
+                console.log('Loading signature in PdfOverlay browser context...');
+                
+                // Try to load from public folder via fetch
+                try {
+                  console.log('Attempting to fetch /sign.png...');
+                  const response = await fetch('/sign.png');
+                  if (response.ok) {
+                    const blob = await response.blob();
+                    console.log('Successfully fetched sign.png in PdfOverlay, converting to base64...');
+                    return new Promise((resolve) => {
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        const result = reader.result as string;
+                        console.log('Successfully converted sign.png to base64 in PdfOverlay, length:', result?.length);
+                        resolve(result);
+                      };
+                      reader.onerror = () => {
+                        console.error('FileReader error while converting sign.png in PdfOverlay');
+                        resolve(null);
+                      };
+                      reader.readAsDataURL(blob);
+                    });
+                  } else {
+                    console.warn('Failed to fetch sign.png in PdfOverlay, status:', response.status);
+                  }
+                } catch (error) {
+                  console.warn('Failed to load sign.png via direct fetch in PdfOverlay:', error);
+                }
+                
+                // Fallback to API route
+                try {
+                  console.log('Trying API route fallback in PdfOverlay...');
+                  const response = await fetch('/api/signature');
+                  if (response.ok) {
+                    const data = await response.json();
+                    console.log('Successfully loaded signature from API route in PdfOverlay');
+                    return data.signature;
+                  } else {
+                    console.warn('API route failed in PdfOverlay, status:', response.status);
+                  }
+                } catch (error) {
+                  console.warn('Failed to load signature from API in PdfOverlay:', error);
+                }
+                
+                console.warn('All signature loading methods failed in PdfOverlay');
+                return null;
+              } catch (error) {
+                console.error('Could not load signature image for PdfOverlay:', error);
+                return null;
+              }
             };
             
             // Create PDF with signature
@@ -354,9 +392,14 @@ Harsh Vardhan Bhandari
             // Add signature image
             try {
               const signatureDataURL = await loadSignatureImage();
-              pdf.addImage(signatureDataURL, 'PNG', signatureX + 5, signatureY + 12, 40, 15);
+              if (signatureDataURL) {
+                pdf.addImage(signatureDataURL, 'PNG', signatureX + 5, signatureY + 12, 40, 15);
+                console.log('Successfully added signature to PDF in PdfOverlay');
+              } else {
+                console.warn('No signature data available for PDF in PdfOverlay');
+              }
             } catch (error) {
-              console.warn('Could not load signature image:', error);
+              console.warn('Could not load signature image in PdfOverlay:', error);
             }
             
             // Create blob and download

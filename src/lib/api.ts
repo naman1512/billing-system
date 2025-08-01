@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 // Helper function to get auth token
 const getAuthToken = (): string | null => {
@@ -154,22 +154,29 @@ export const invoicesAPI = {
     return apiRequest(`/invoices${queryString ? `?${queryString}` : ''}`);
   },
 
+  getRecent: (limit?: number) => {
+    const queryParams = limit ? `?limit=${limit}` : '';
+    return apiRequest(`/invoices/recent${queryParams}`);
+  },
+
   getById: (id: string) => apiRequest(`/invoices/${id}`),
 
   create: (invoiceData: {
     companyId: string;
     refNumber: string;
     amount: number;
+    invoiceDate: string; // Added this required field
     rentDescription?: string;
     dueDate?: string;
     emailRecipient?: string;
     status?: string;
+    invoiceData?: object; // Complete invoice data for historical accuracy
   }, pdfFile?: File) => {
     if (pdfFile) {
       const formData = new FormData();
       Object.entries(invoiceData).forEach(([key, value]) => {
         if (value !== undefined) {
-          formData.append(key, value.toString());
+          formData.append(key, typeof value === 'object' ? JSON.stringify(value) : value.toString());
         }
       });
       formData.append('pdf', pdfFile);
@@ -183,15 +190,32 @@ export const invoicesAPI = {
   },
 
   update: (id: string, invoiceData: Record<string, unknown>) =>
-    apiRequest(`/invoices?id=${id}`, {
+    apiRequest(`/invoices/${id}`, {
       method: 'PUT',
       body: JSON.stringify(invoiceData),
+    }),
+
+  updateStatus: (id: string, status: string, emailSentAt?: string, emailRecipient?: string) =>
+    apiRequest(`/invoices/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, emailSentAt, emailRecipient }),
     }),
 
   delete: (id: string) =>
     apiRequest(`/invoices/${id}`, {
       method: 'DELETE',
     }),
+
+  getPdf: (id: string) => {
+    const token = getAuthToken();
+    const config: RequestInit = {
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    };
+    
+    return fetch(`${API_BASE_URL}/invoices/${id}/pdf`, config);
+  },
 };
 
 // Auth helper functions

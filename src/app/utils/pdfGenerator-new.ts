@@ -34,6 +34,65 @@ const getSignatureBase64 = async (): Promise<string | null> => {
     return null;
   }
 };
+
+// Load signature image as base64 for browser-side PDF generation
+const getSignatureBase64Browser = async (): Promise<string | null> => {
+  try {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    
+    console.log('Loading signature in browser context...');
+    
+    // Try to load from public folder via fetch
+    try {
+      console.log('Attempting to fetch /sign.png...');
+      const response = await fetch('/sign.png');
+      if (response.ok) {
+        const blob = await response.blob();
+        console.log('Successfully fetched sign.png, converting to base64...');
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            console.log('Successfully converted sign.png to base64, length:', result?.length);
+            resolve(result);
+          };
+          reader.onerror = () => {
+            console.error('FileReader error while converting sign.png');
+            resolve(null);
+          };
+          reader.readAsDataURL(blob);
+        });
+      } else {
+        console.warn('Failed to fetch sign.png, status:', response.status);
+      }
+    } catch (error) {
+      console.warn('Failed to load sign.png via direct fetch:', error);
+    }
+    
+    // Fallback to API route
+    try {
+      console.log('Trying API route fallback...');
+      const response = await fetch('/api/signature');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Successfully loaded signature from API route');
+        return data.signature;
+      } else {
+        console.warn('API route failed, status:', response.status);
+      }
+    } catch (error) {
+      console.warn('Failed to load signature from API:', error);
+    }
+    
+    console.warn('All signature loading methods failed');
+    return null;
+  } catch (error) {
+    console.error('Could not load signature image for browser:', error);
+    return null;
+  }
+};
 // Helper to generate invoice HTML for emails with embedded signature
 export const generateInvoiceHTMLEmail = async (invoiceData: InvoiceData): Promise<string> => {
   console.log('Generating invoice HTML email...');
@@ -747,8 +806,12 @@ export const generateInvoiceHTML = (
 // Utility function to generate PDF from HTML content (for preview in browser)
 export const generatePDF = async (invoiceData: InvoiceData): Promise<string> => {
   try {
-    // Generate HTML for PDF preview
-    const invoiceHTML = generateInvoiceHTML(invoiceData);
+    // Load signature for browser context
+    const signatureDataUrl = await getSignatureBase64Browser();
+    console.log('Browser signature loaded:', signatureDataUrl ? 'Success' : 'Failed');
+    
+    // Generate HTML for PDF preview with signature
+    const invoiceHTML = generateInvoiceHTML(invoiceData, signatureDataUrl);
     
     // Create a blob URL for the HTML content
     const blob = new Blob([invoiceHTML], { type: 'text/html' });

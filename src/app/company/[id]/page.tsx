@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { companiesAPI, invoicesAPI } from '../../../lib/api';
 import { generatePDF, InvoiceData } from '../../utils/pdfGenerator-new';
+import PdfOverlay from '../../components/PdfOverlay/PdfOverlay';
 
 interface Invoice {
   id: string;
@@ -17,9 +18,10 @@ interface Invoice {
   pdfUrl?: string;
   emailSentAt?: string;
   emailRecipient?: string;
+  invoiceData?: InvoiceData; // Added saved invoice data
   company: {
     name: string;
-    gstNumbers: string; // JSON string, not array
+    gstNumbers?: string[]; // Made optional and array
   };
 }
 
@@ -29,7 +31,7 @@ interface Company {
   addressLine1: string;
   addressLine2?: string;
   addressLine3?: string;
-  gstNumbers: string; // This is a JSON string, not an array
+  gstNumbers: string[]; // Fixed: should be array
   rentedArea: number;
   rentRate: number;
 }
@@ -42,6 +44,10 @@ export default function CompanyInvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPdfOverlayOpen, setIsPdfOverlayOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState('');
+  const [currentInvoiceData, setCurrentInvoiceData] = useState<InvoiceData | null>(null);
+  const [currentInvoiceId, setCurrentInvoiceId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCompanyData = async () => {
@@ -96,35 +102,71 @@ export default function CompanyInvoicesPage() {
         return;
       }
 
-      // Create invoice data for PDF generation
-      const invoiceData: InvoiceData = {
-        recipientName: company.name,
-        addressLine1: company.addressLine1,
-        addressLine2: company.addressLine2 || '',
-        addressLine3: company.addressLine3 || '',
-        recipientGst: Array.isArray(company.gstNumbers) ? company.gstNumbers[0] : 
-                     typeof company.gstNumbers === 'string' ? JSON.parse(company.gstNumbers)[0] : '',
-        refNumber: invoice.refNumber,
-        invoiceDate: new Date(invoice.invoiceDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
-        rentedArea: company.rentedArea.toString(),
-        rentRate: company.rentRate.toString(),
-        rentAmount: (company.rentedArea * company.rentRate).toString(),
-        sgstRate: '9', // Default SGST rate
-        sgstAmount: ((company.rentedArea * company.rentRate * 9) / 100).toString(),
-        cgstRate: '9', // Default CGST rate
-        cgstAmount: ((company.rentedArea * company.rentRate * 9) / 100).toString(),
-        grandTotal: invoice.amount.toString(),
-        grandTotalInWords: 'Rupees ' + invoice.amount + ' Only', // You might want to implement number to words conversion
-        rentMonth: new Date(invoice.invoiceDate).toLocaleDateString('en-US', { month: 'long' }),
-        rentYear: new Date(invoice.invoiceDate).getFullYear().toString().slice(-2),
-        rentDescription: invoice.rentDescription || `Rent for the month of ${new Date(invoice.invoiceDate).toLocaleDateString('en-US', { month: 'long' })} '${new Date(invoice.invoiceDate).getFullYear().toString().slice(-2)}`
-      };
+      console.log('Company data for PDF:', company);
+      console.log('Invoice data for PDF:', invoice);
 
+      let invoiceData: InvoiceData;
+
+      // If invoice has saved data, use it; otherwise create new data
+      if (invoice.invoiceData) {
+        // Use the saved invoice data
+        invoiceData = invoice.invoiceData;
+        console.log('Using saved invoice data for view:', invoiceData);
+      } else {
+        // Fallback: Create invoice data from company details (for old invoices)
+        console.log('No saved invoice data found, creating from company details for view');
+        console.log('Company data available:', {
+          name: company.name,
+          addressLine1: company.addressLine1,
+          addressLine2: company.addressLine2,
+          addressLine3: company.addressLine3,
+          gstNumbers: company.gstNumbers,
+          rentedArea: company.rentedArea,
+          rentRate: company.rentRate
+        });
+        
+        // Ensure all required fields have fallback values
+        const recipientGst = (company.gstNumbers && company.gstNumbers.length > 0) ? company.gstNumbers[0] : '';
+        const rentedArea = company.rentedArea || 0;
+        const rentRate = company.rentRate || 0;
+        const rentAmount = rentedArea * rentRate;
+        const sgstAmount = (rentAmount * 9) / 100;
+        const cgstAmount = (rentAmount * 9) / 100;
+        const grandTotal = rentAmount + sgstAmount + cgstAmount;
+        
+        invoiceData = {
+          recipientName: company.name || 'Unknown Company',
+          addressLine1: company.addressLine1 || '',
+          addressLine2: company.addressLine2 || '',
+          addressLine3: company.addressLine3 || '',
+          recipientGst: recipientGst,
+          refNumber: invoice.refNumber || 'Unknown Ref',
+          invoiceDate: new Date(invoice.invoiceDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+          rentedArea: rentedArea.toString(),
+          rentRate: rentRate.toString(),
+          rentAmount: rentAmount.toString(),
+          sgstRate: '9',
+          sgstAmount: sgstAmount.toString(),
+          cgstRate: '9',
+          cgstAmount: cgstAmount.toString(),
+          grandTotal: grandTotal.toString(),
+          grandTotalInWords: `Rupees ${grandTotal} Only`,
+          rentMonth: new Date(invoice.invoiceDate).toLocaleDateString('en-US', { month: 'long' }),
+          rentYear: new Date(invoice.invoiceDate).getFullYear().toString().slice(-2),
+          rentDescription: invoice.rentDescription || `Rent for the month of ${new Date(invoice.invoiceDate).toLocaleDateString('en-US', { month: 'long' })} '${new Date(invoice.invoiceDate).getFullYear().toString().slice(-2)}`
+        };
+        
+        console.log('Created fallback invoice data:', invoiceData);
+      }
+
+      console.log('Final invoice data for PDF generation:', invoiceData);
+      console.log('Generating PDF for view with invoice data:', invoiceData);
       // Generate PDF URL and open in new tab
       const url = await generatePDF(invoiceData);
       window.open(url, '_blank');
     } catch (error) {
       console.error('Error viewing PDF:', error);
+      alert(`Error: Failed to view PDF - ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -132,69 +174,70 @@ export default function CompanyInvoicesPage() {
     if (!company) return;
 
     try {
-      // Create invoice data for PDF generation
-      const invoiceData: InvoiceData = {
-        recipientName: company.name,
-        addressLine1: company.addressLine1,
-        addressLine2: company.addressLine2 || '',
-        addressLine3: company.addressLine3 || '',
-        recipientGst: Array.isArray(company.gstNumbers) ? company.gstNumbers[0] : 
-                     typeof company.gstNumbers === 'string' ? JSON.parse(company.gstNumbers)[0] : '',
-        refNumber: invoice.refNumber,
-        invoiceDate: new Date(invoice.invoiceDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
-        rentedArea: company.rentedArea.toString(),
-        rentRate: company.rentRate.toString(),
-        rentAmount: (company.rentedArea * company.rentRate).toString(),
-        sgstRate: '9',
-        sgstAmount: ((company.rentedArea * company.rentRate * 9) / 100).toString(),
-        cgstRate: '9',
-        cgstAmount: ((company.rentedArea * company.rentRate * 9) / 100).toString(),
-        grandTotal: invoice.amount.toString(),
-        grandTotalInWords: 'Rupees ' + invoice.amount + ' Only',
-        rentMonth: new Date(invoice.invoiceDate).toLocaleDateString('en-US', { month: 'long' }),
-        rentYear: new Date(invoice.invoiceDate).getFullYear().toString().slice(-2),
-        rentDescription: invoice.rentDescription || `Rent for the month of ${new Date(invoice.invoiceDate).toLocaleDateString('en-US', { month: 'long' })} '${new Date(invoice.invoiceDate).getFullYear().toString().slice(-2)}`
-      };
+      let invoiceData: InvoiceData;
 
-      // Generate PDF URL
-      const pdfUrl = await generatePDF(invoiceData);
-      
-      // Convert URL to blob for email
-      const response = await fetch(pdfUrl);
-      const pdfBlob = await response.blob();
-      
-      // Create FormData and send email
-      const formData = new FormData();
-      formData.append('pdf', pdfBlob, `Invoice-${invoice.refNumber}.pdf`);
-      formData.append('recipientEmail', invoice.emailRecipient || company.name + '@example.com');
-      formData.append('subject', `Invoice ${invoice.refNumber}`);
-      formData.append('body', `Please find attached your invoice ${invoice.refNumber}.`);
-
-      const emailResponse = await fetch('/api/send-email', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (emailResponse.ok) {
-        // Update invoice status to SENT
-        const updateResponse = await invoicesAPI.update(invoice.id, {
-          ...invoice,
-          status: 'SENT'
-        });
-
-        if (updateResponse) {
-          alert('Invoice sent successfully!');
-          // Refresh invoices
-          const invoicesResponse = await companiesAPI.getInvoices(companyId);
-          const invoicesData = invoicesResponse as { invoices: Invoice[] };
-          setInvoices(invoicesData.invoices || []);
-        }
+      // If invoice has saved data, use it; otherwise create new data
+      if (invoice.invoiceData) {
+        // Use the saved invoice data
+        invoiceData = invoice.invoiceData;
+        console.log('Using saved invoice data for send:', invoiceData);
       } else {
-        alert('Failed to send invoice.');
+        // Fallback: Create invoice data from company details (for old invoices)
+        console.log('No saved invoice data found, creating from company details for send');
+        console.log('Company data available:', {
+          name: company.name,
+          addressLine1: company.addressLine1,
+          addressLine2: company.addressLine2,
+          addressLine3: company.addressLine3,
+          gstNumbers: company.gstNumbers,
+          rentedArea: company.rentedArea,
+          rentRate: company.rentRate
+        });
+        
+        // Ensure all required fields have fallback values
+        const recipientGst = (company.gstNumbers && company.gstNumbers.length > 0) ? company.gstNumbers[0] : '';
+        const rentedArea = company.rentedArea || 0;
+        const rentRate = company.rentRate || 0;
+        const rentAmount = rentedArea * rentRate;
+        const sgstAmount = (rentAmount * 9) / 100;
+        const cgstAmount = (rentAmount * 9) / 100;
+        const grandTotal = rentAmount + sgstAmount + cgstAmount;
+        
+        invoiceData = {
+          recipientName: company.name || 'Unknown Company',
+          addressLine1: company.addressLine1 || '',
+          addressLine2: company.addressLine2 || '',
+          addressLine3: company.addressLine3 || '',
+          recipientGst: recipientGst,
+          refNumber: invoice.refNumber || 'Unknown Ref',
+          invoiceDate: new Date(invoice.invoiceDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+          rentedArea: rentedArea.toString(),
+          rentRate: rentRate.toString(),
+          rentAmount: rentAmount.toString(),
+          sgstRate: '9',
+          sgstAmount: sgstAmount.toString(),
+          cgstRate: '9',
+          cgstAmount: cgstAmount.toString(),
+          grandTotal: grandTotal.toString(),
+          grandTotalInWords: `Rupees ${grandTotal} Only`,
+          rentMonth: new Date(invoice.invoiceDate).toLocaleDateString('en-US', { month: 'long' }),
+          rentYear: new Date(invoice.invoiceDate).getFullYear().toString().slice(-2),
+          rentDescription: invoice.rentDescription || `Rent for the month of ${new Date(invoice.invoiceDate).toLocaleDateString('en-US', { month: 'long' })} '${new Date(invoice.invoiceDate).getFullYear().toString().slice(-2)}`
+        };
+        
+        console.log('Created fallback invoice data for send:', invoiceData);
       }
+
+      console.log('Generating PDF for send with invoice data:', invoiceData);
+      // Generate PDF URL
+      const url = await generatePDF(invoiceData);
+      setPdfUrl(url);
+      setCurrentInvoiceData(invoiceData);
+      setCurrentInvoiceId(invoice.id); // Store the invoice ID for updating
+      setIsPdfOverlayOpen(true);
     } catch (error) {
-      console.error('Error sending invoice:', error);
-      alert('Error sending invoice.');
+      console.error('Error opening Convert & Send:', error);
+      alert(`Error: Failed to open invoice preview - ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -255,7 +298,7 @@ export default function CompanyInvoicesPage() {
                 <h1 className="text-3xl font-bold text-white mb-2">{company.name}</h1>
                 <p className="text-gray-400 mb-4">{company.addressLine3}</p>
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {JSON.parse(company.gstNumbers).map((gst: string, index: number) => (
+                  {company.gstNumbers.map((gst: string, index: number) => (
                     <span 
                       key={index}
                       className="px-3 py-1 bg-green-400/10 text-green-400 rounded-full text-sm border border-green-400/20"
@@ -322,7 +365,7 @@ export default function CompanyInvoicesPage() {
                         </div>
                         <div>
                           <p className="text-gray-500">GST Numbers</p>
-                          <p className="text-gray-300">{JSON.parse(invoice.company.gstNumbers).join(', ')}</p>
+                          <p className="text-gray-300">{invoice.company.gstNumbers?.join(', ') || 'N/A'}</p>
                         </div>
                         {invoice.rentDescription && (
                           <div>
@@ -381,6 +424,24 @@ export default function CompanyInvoicesPage() {
           )}
         </div>
       </div>
+      
+      {/* PDF Overlay */}
+      {isPdfOverlayOpen && pdfUrl && currentInvoiceData && (
+        <PdfOverlay
+          isOpen={isPdfOverlayOpen}
+          pdfUrl={pdfUrl}
+          invoiceData={currentInvoiceData}
+          existingInvoiceId={currentInvoiceId || undefined}
+          onClose={() => {
+            setIsPdfOverlayOpen(false);
+            // Refresh invoices after closing overlay (in case invoice was sent)
+            companiesAPI.getInvoices(companyId).then((response) => {
+              const invoicesData = response as { invoices: Invoice[] };
+              setInvoices(invoicesData.invoices || []);
+            }).catch(console.error);
+          }}
+        />
+      )}
     </div>
   );
 }
