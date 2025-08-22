@@ -134,13 +134,16 @@ const getJsPDF = async () => {
   return { jsPDF, html2canvas };
 };
 
-// Utility to format date as "21st July 2025"
+// Utility to format date as "1st August 2025"
 export function formatInvoiceDate(dateString: string): string {
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return dateString;
+  
   const day = date.getDate();
-  const month = date.toLocaleString('default', { month: 'long' });
+  const month = date.toLocaleString('en-GB', { month: 'long' });
   const year = date.getFullYear();
+  
+  // Get ordinal suffix for day
   const getOrdinal = (n: number) => {
     if (n > 3 && n < 21) return 'th';
     switch (n % 10) {
@@ -150,6 +153,8 @@ export function formatInvoiceDate(dateString: string): string {
       default: return 'th';
     }
   };
+  
+  // Format as "1st August 2025"
   return `${day}${getOrdinal(day)} ${month} ${year}`;
 }
 
