@@ -216,16 +216,27 @@ export default function CreateBill() {
 
   // Auto-calculate rent amount when area or rate changes
   useEffect(() => {
-    const calculatedRentAmount = (parseInt(rentedArea || '0') * parseInt(rentRate || '0')).toString();
-    setRentAmount(calculatedRentAmount);
+    // Parse values with parseFloat to handle decimal points if needed
+    const area = parseFloat(rentedArea || '0');
+    const rate = parseFloat(rentRate || '0');
+    
+    // Calculate with floating point precision
+    const calculatedRent = area * rate;
+    
+    // Round to nearest integer
+    const roundedRent = Math.round(calculatedRent);
+    
+    setRentAmount(roundedRent.toString());
   }, [rentedArea, rentRate]);
 
   // Auto-calculate SGST and CGST amounts based on rent amount and rates
   useEffect(() => {
-    const rent = parseInt(rentAmount || '0');
-    const sgstRateValue = parseInt(sgstRate || '0');
-    const cgstRateValue = parseInt(cgstRate || '0');
+    // Parse values with parseFloat for better decimal handling
+    const rent = parseFloat(rentAmount || '0');
+    const sgstRateValue = parseFloat(sgstRate || '0');
+    const cgstRateValue = parseFloat(cgstRate || '0');
     
+    // Calculate GST amounts with floating point precision
     const calculatedSgstAmount = Math.round((rent * sgstRateValue) / 100);
     const calculatedCgstAmount = Math.round((rent * cgstRateValue) / 100);
     
